@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+/* Custom Theme Variables for Trackier/Affise style aesthetic */
+:root {
+  --bg-primary: #f5f7fa;      /* Page canvas body bg */
+  --bg-secondary: #ffffff;    /* Card and active containers */
+  --bg-tertiary: #f8fafc;     /* Well tables and filters */
+  --bg-darker: #f1f5f9;       /* Dark contrast highlights */
+  --border-color: #e2e8f0;    /* Muted clean panel outlines */
+  --text-primary: #0f172a;    /* Muted charcoal body text */
+  --text-secondary: #334155;  /* Slate descriptive labels */
+  --text-muted: #64748b;       /* Soft caption grays */
+  --table-header: #f8fafc;    /* Clean ledger table headers */
+}
+
+/* Dynamic Global Theme Interceptor Overrides when not explicitly in Dark mode */
+:root:not(.dark) .bg-slate-950 {
+  background-color: #f5f7fa !important;
+}
+
+:root:not(.dark) .bg-slate-900 {
+  background-color: #ffffff !important;
+}
+
+:root:not(.dark) .bg-slate-950\/65,
+:root:not(.dark) .bg-slate-950\/60,
+:root:not(.dark) .bg-slate-950\/70,
+:root:not(.dark) .bg-slate-950\/80,
+:root:not(.dark) .bg-slate-950\/90 {
+  background-color: rgba(245, 247, 250, 0.9) !important;
+}
+
+:root:not(.dark) .bg-slate-900\/40,
+:root:not(.dark) .bg-slate-900\/60 {
+  background-color: rgba(255, 255, 255, 0.6) !important;
+}
+
+:root:not(.dark) .bg-slate-850\/20,
+:root:not(.dark) .bg-slate-850\/35 {
+  background-color: rgba(226, 232, 240, 0.4) !important;
+}
+
+:root:not(.dark) .border-slate-800,
+:root:not(.dark) .border-slate-850,
+:root:not(.dark) .border-slate-700 {
+  border-color: #e2e8f0 !important;
+}
+
+:root:not(.dark) .text-slate-100,
+:root:not(.dark) .text-slate-200,
+:root:not(.dark) .text-white {
+  color: #0f172a !important;
+}
+
+:root:not(.dark) .text-slate-300,
+:root:not(.dark) .text-slate-400 {
+  color: #334155 !important;
+}
+
+:root:not(.dark) .text-slate-500 {
+  color: #64748b !important;
+}
+
+:root:not(.dark) .divide-slate-850 > :not([hidden]) ~ :not([hidden]),
+:root:not(.dark) .divide-slate-800 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e2e8f0 !important;
+}
+
+.dark {
+  --bg-primary: #020617;
+  --bg-secondary: #0f172a;
+  --bg-tertiary: #1e293b;
+  --bg-darker: #090d16;
+  --border-color: #1e293b;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --table-header: #0b1122;
+}
+
+/* Custom class hooks mapping variables onto Tailwind utility patterns */
+.theme-bg-page { background-color: var(--bg-primary); }
+.theme-bg-card { background-color: var(--bg-secondary); }
+.theme-bg-well { background-color: var(--bg-tertiary); }
+.theme-bg-darker { background-color: var(--bg-darker); }
+.theme-border { border-color: var(--border-color); }
+.theme-text-main { color: var(--text-primary); }
+.theme-text-secondary { color: var(--text-secondary); }
+.theme-text-muted { color: var(--text-muted); }
+.theme-table-header { background-color: var(--table-header); }
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}

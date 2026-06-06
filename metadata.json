@@ -1,0 +1,6 @@
+{
+  "name": "ApexTrack Blueprint",
+  "description": "Interactive master product blueprint and enterprise SaaS Product Requirements Document (PRD) explorer for ApexTrack Affiliate Tracking Platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
