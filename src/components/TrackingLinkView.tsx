@@ -172,10 +172,10 @@ export function TrackingLinkView() {
             </div>
 
             <div className="space-y-2">
-              <span className="text-[10px] uppercase font-semibold text-slate-400 font-mono block">
+              <span className="text-[10px] uppercase font-semibold text-slate-700 font-mono block">
                 Your Complete Redirection URI:
               </span>
-              <pre className="p-4 bg-slate-950 rounded-xl border border-slate-850 text-cyan-300 text-xs font-mono break-all leading-normal whitespace-pre-wrap select-all focus:outline-none" style={{ minHeight: "100px" }}>
+              <pre className="p-4 bg-cyan-50 rounded-xl border border-cyan-200 text-cyan-700 text-xs font-mono break-words leading-normal whitespace-pre-wrap select-all focus:outline-none" style={{ minHeight: "100px" }}>
                 {customGeneratedUrl}
               </pre>
             </div>

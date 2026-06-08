@@ -45,7 +45,7 @@ export function MyOffersView({ setSelectedOfferId, offers }: MyOffersViewProps) 
                 <span className="bg-slate-950 text-cyan-400 text-[9px] font-bold font-mono px-2 py-0.5 rounded border border-slate-850 uppercase">
                   ID: {offer.id}
                 </span>
-                <span className="bg-emerald-950/60 text-emerald-400 text-[8px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider border border-emerald-900/30">
+                <span className="bg-emerald-50 text-emerald-800 text-[8px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider border border-emerald-300">
                   Approved
                 </span>
               </div>
@@ -67,7 +67,7 @@ export function MyOffersView({ setSelectedOfferId, offers }: MyOffersViewProps) 
             <div className="grid grid-cols-2 gap-2 bg-slate-950 p-2.5 rounded-xl border border-slate-850 text-[10px] font-mono text-slate-500">
               <div>
                 <span className="block text-[8px] uppercase font-bold text-slate-400">Payout rate</span>
-                <strong className="text-cyan-300 text-xs">${offer.payoutValue.toFixed(2)} / {offer.payoutType}</strong>
+                <strong className="text-slate-100 text-xs font-semibold">${offer.payoutValue.toFixed(2)} / {offer.payoutType}</strong>
               </div>
               <div>
                 <span className="block text-[8px] uppercase font-bold text-slate-400">Daily capsule</span>

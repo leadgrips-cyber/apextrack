@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Search,
   SlidersHorizontal,
@@ -29,6 +29,222 @@ import {
 } from "lucide-react";
 import { SYSTEM_POSTBACK_PLACEHOLDERS } from "../data/publisherDemo";
 
+const COUNTRY_OPTIONS = [
+  { value: "", label: "All Countries" },
+  { value: "AF", label: "Afghanistan" },
+  { value: "AL", label: "Albania" },
+  { value: "DZ", label: "Algeria" },
+  { value: "AS", label: "American Samoa" },
+  { value: "AD", label: "Andorra" },
+  { value: "AO", label: "Angola" },
+  { value: "AI", label: "Anguilla" },
+  { value: "AG", label: "Antigua and Barbuda" },
+  { value: "AR", label: "Argentina" },
+  { value: "AM", label: "Armenia" },
+  { value: "AW", label: "Aruba" },
+  { value: "AU", label: "Australia" },
+  { value: "AT", label: "Austria" },
+  { value: "AZ", label: "Azerbaijan" },
+  { value: "BS", label: "Bahamas" },
+  { value: "BH", label: "Bahrain" },
+  { value: "BD", label: "Bangladesh" },
+  { value: "BB", label: "Barbados" },
+  { value: "BY", label: "Belarus" },
+  { value: "BE", label: "Belgium" },
+  { value: "BZ", label: "Belize" },
+  { value: "BJ", label: "Benin" },
+  { value: "BM", label: "Bermuda" },
+  { value: "BT", label: "Bhutan" },
+  { value: "BO", label: "Bolivia" },
+  { value: "BA", label: "Bosnia and Herzegovina" },
+  { value: "BW", label: "Botswana" },
+  { value: "BR", label: "Brazil" },
+  { value: "BN", label: "Brunei" },
+  { value: "BG", label: "Bulgaria" },
+  { value: "BF", label: "Burkina Faso" },
+  { value: "BI", label: "Burundi" },
+  { value: "CV", label: "Cabo Verde" },
+  { value: "KH", label: "Cambodia" },
+  { value: "CM", label: "Cameroon" },
+  { value: "CA", label: "Canada" },
+  { value: "KY", label: "Cayman Islands" },
+  { value: "CF", label: "Central African Republic" },
+  { value: "TD", label: "Chad" },
+  { value: "CL", label: "Chile" },
+  { value: "CN", label: "China" },
+  { value: "CO", label: "Colombia" },
+  { value: "KM", label: "Comoros" },
+  { value: "CR", label: "Costa Rica" },
+  { value: "CI", label: "Côte d'Ivoire" },
+  { value: "HR", label: "Croatia" },
+  { value: "CY", label: "Cyprus" },
+  { value: "CZ", label: "Czech Republic" },
+  { value: "DK", label: "Denmark" },
+  { value: "DJ", label: "Djibouti" },
+  { value: "DM", label: "Dominica" },
+  { value: "DO", label: "Dominican Republic" },
+  { value: "EC", label: "Ecuador" },
+  { value: "EG", label: "Egypt" },
+  { value: "SV", label: "El Salvador" },
+  { value: "GQ", label: "Equatorial Guinea" },
+  { value: "ER", label: "Eritrea" },
+  { value: "EE", label: "Estonia" },
+  { value: "SZ", label: "Eswatini" },
+  { value: "ET", label: "Ethiopia" },
+  { value: "FK", label: "Falkland Islands" },
+  { value: "FO", label: "Faroe Islands" },
+  { value: "FJ", label: "Fiji" },
+  { value: "FI", label: "Finland" },
+  { value: "FR", label: "France" },
+  { value: "GF", label: "French Guiana" },
+  { value: "PF", label: "French Polynesia" },
+  { value: "GA", label: "Gabon" },
+  { value: "GM", label: "Gambia" },
+  { value: "GE", label: "Georgia" },
+  { value: "DE", label: "Germany" },
+  { value: "GH", label: "Ghana" },
+  { value: "GI", label: "Gibraltar" },
+  { value: "GR", label: "Greece" },
+  { value: "GL", label: "Greenland" },
+  { value: "GD", label: "Grenada" },
+  { value: "GP", label: "Guadeloupe" },
+  { value: "GU", label: "Guam" },
+  { value: "GT", label: "Guatemala" },
+  { value: "GN", label: "Guinea" },
+  { value: "GW", label: "Guinea-Bissau" },
+  { value: "GY", label: "Guyana" },
+  { value: "HT", label: "Haiti" },
+  { value: "HN", label: "Honduras" },
+  { value: "HK", label: "Hong Kong" },
+  { value: "HU", label: "Hungary" },
+  { value: "IS", label: "Iceland" },
+  { value: "IN", label: "India" },
+  { value: "ID", label: "Indonesia" },
+  { value: "IR", label: "Iran" },
+  { value: "IQ", label: "Iraq" },
+  { value: "IE", label: "Ireland" },
+  { value: "IL", label: "Israel" },
+  { value: "IT", label: "Italy" },
+  { value: "JM", label: "Jamaica" },
+  { value: "JP", label: "Japan" },
+  { value: "JO", label: "Jordan" },
+  { value: "KZ", label: "Kazakhstan" },
+  { value: "KE", label: "Kenya" },
+  { value: "KI", label: "Kiribati" },
+  { value: "KW", label: "Kuwait" },
+  { value: "KG", label: "Kyrgyzstan" },
+  { value: "LA", label: "Laos" },
+  { value: "LV", label: "Latvia" },
+  { value: "LB", label: "Lebanon" },
+  { value: "LS", label: "Lesotho" },
+  { value: "LR", label: "Liberia" },
+  { value: "LY", label: "Libya" },
+  { value: "LI", label: "Liechtenstein" },
+  { value: "LT", label: "Lithuania" },
+  { value: "LU", label: "Luxembourg" },
+  { value: "MO", label: "Macau" },
+  { value: "MK", label: "North Macedonia" },
+  { value: "MG", label: "Madagascar" },
+  { value: "MW", label: "Malawi" },
+  { value: "MY", label: "Malaysia" },
+  { value: "MV", label: "Maldives" },
+  { value: "ML", label: "Mali" },
+  { value: "MT", label: "Malta" },
+  { value: "MQ", label: "Martinique" },
+  { value: "MR", label: "Mauritania" },
+  { value: "MU", label: "Mauritius" },
+  { value: "MX", label: "Mexico" },
+  { value: "MD", label: "Moldova" },
+  { value: "MC", label: "Monaco" },
+  { value: "MN", label: "Mongolia" },
+  { value: "ME", label: "Montenegro" },
+  { value: "MS", label: "Montserrat" },
+  { value: "MA", label: "Morocco" },
+  { value: "MZ", label: "Mozambique" },
+  { value: "MM", label: "Myanmar" },
+  { value: "NA", label: "Namibia" },
+  { value: "NR", label: "Nauru" },
+  { value: "NP", label: "Nepal" },
+  { value: "NL", label: "Netherlands" },
+  { value: "NC", label: "New Caledonia" },
+  { value: "NZ", label: "New Zealand" },
+  { value: "NI", label: "Nicaragua" },
+  { value: "NE", label: "Niger" },
+  { value: "NG", label: "Nigeria" },
+  { value: "KP", label: "North Korea" },
+  { value: "NO", label: "Norway" },
+  { value: "OM", label: "Oman" },
+  { value: "PK", label: "Pakistan" },
+  { value: "PS", label: "Palestine" },
+  { value: "PA", label: "Panama" },
+  { value: "PG", label: "Papua New Guinea" },
+  { value: "PY", label: "Paraguay" },
+  { value: "PE", label: "Peru" },
+  { value: "PH", label: "Philippines" },
+  { value: "PL", label: "Poland" },
+  { value: "PT", label: "Portugal" },
+  { value: "PR", label: "Puerto Rico" },
+  { value: "QA", label: "Qatar" },
+  { value: "RE", label: "Réunion" },
+  { value: "RO", label: "Romania" },
+  { value: "RU", label: "Russia" },
+  { value: "RW", label: "Rwanda" },
+  { value: "KN", label: "Saint Kitts and Nevis" },
+  { value: "LC", label: "Saint Lucia" },
+  { value: "VC", label: "Saint Vincent and the Grenadines" },
+  { value: "WS", label: "Samoa" },
+  { value: "SM", label: "San Marino" },
+  { value: "ST", label: "São Tomé and Príncipe" },
+  { value: "SA", label: "Saudi Arabia" },
+  { value: "SN", label: "Senegal" },
+  { value: "RS", label: "Serbia" },
+  { value: "SC", label: "Seychelles" },
+  { value: "SL", label: "Sierra Leone" },
+  { value: "SG", label: "Singapore" },
+  { value: "SK", label: "Slovakia" },
+  { value: "SI", label: "Slovenia" },
+  { value: "SB", label: "Solomon Islands" },
+  { value: "SO", label: "Somalia" },
+  { value: "ZA", label: "South Africa" },
+  { value: "KR", label: "South Korea" },
+  { value: "SS", label: "South Sudan" },
+  { value: "ES", label: "Spain" },
+  { value: "LK", label: "Sri Lanka" },
+  { value: "SD", label: "Sudan" },
+  { value: "SR", label: "Suriname" },
+  { value: "SE", label: "Sweden" },
+  { value: "CH", label: "Switzerland" },
+  { value: "SY", label: "Syria" },
+  { value: "TW", label: "Taiwan" },
+  { value: "TJ", label: "Tajikistan" },
+  { value: "TZ", label: "Tanzania" },
+  { value: "TH", label: "Thailand" },
+  { value: "TL", label: "Timor-Leste" },
+  { value: "TG", label: "Togo" },
+  { value: "TO", label: "Tonga" },
+  { value: "TT", label: "Trinidad and Tobago" },
+  { value: "TN", label: "Tunisia" },
+  { value: "TR", label: "Turkey" },
+  { value: "TM", label: "Turkmenistan" },
+  { value: "TC", label: "Turks and Caicos Islands" },
+  { value: "TV", label: "Tuvalu" },
+  { value: "UG", label: "Uganda" },
+  { value: "UA", label: "Ukraine" },
+  { value: "AE", label: "United Arab Emirates" },
+  { value: "GB", label: "United Kingdom" },
+  { value: "US", label: "United States" },
+  { value: "UY", label: "Uruguay" },
+  { value: "UZ", label: "Uzbekistan" },
+  { value: "VU", label: "Vanuatu" },
+  { value: "VA", label: "Vatican City" },
+  { value: "VE", label: "Venezuela" },
+  { value: "VN", label: "Vietnam" },
+  { value: "EH", label: "Western Sahara" },
+  { value: "YE", label: "Yemen" },
+  { value: "ZM", label: "Zambia" },
+  { value: "ZW", label: "Zimbabwe" }
+];
+
 interface OfferMarketplaceViewProps {
   onNavigate: (view: string) => void;
   selectedOfferId: string | null;
@@ -52,8 +268,16 @@ export function OfferMarketplaceView({
   setOffers,
   onAddNotification
 }: OfferMarketplaceViewProps) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"All" | "App Install" | "Crypto" | "Finance" | "E-commerce" | "Nutra">("All");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [countryFilter, setCountryFilter] = useState("");
+  const [offerNameFilter, setOfferNameFilter] = useState("");
+  const [offerIdFilter, setOfferIdFilter] = useState("");
+  const [appliedFilters, setAppliedFilters] = useState({
+    category: "",
+    country: "",
+    name: "",
+    id: ""
+  });
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   // Link generation custom states inside the Offer Detail layout
@@ -89,7 +313,7 @@ export function OfferMarketplaceView({
   }, [selectedOfferId, offers]);
 
   // Set default lander when changing currently inspected offer
-  useMemo(() => {
+  useEffect(() => {
     if (currentOffer && currentOffer.landers && currentOffer.landers.length > 0) {
       setSelectedLanderId(currentOffer.landers[0].id);
       setPostbackUrlInput(`https://callback.my-tracker-system.com/receive?click_id={click_id}&payout={payout}&sub1={sub1}`);
@@ -99,15 +323,20 @@ export function OfferMarketplaceView({
   }, [currentOffer]);
 
   // Filters calculation
+  const categories = useMemo(() => {
+    const unique = Array.from(new Set(offers.map((offer) => offer.category)));
+    return unique.sort((a, b) => a.localeCompare(b));
+  }, [offers]);
+
   const filteredOffers = useMemo(() => {
-    return offers.filter(offer => {
-      const matchesSearch = offer.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            offer.id.includes(searchQuery) || 
-                            offer.description.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesTab = activeTab === "All" || offer.category === activeTab;
-      return matchesSearch && matchesTab;
+    return offers.filter((offer) => {
+      const matchesCategory = !appliedFilters.category || offer.category === appliedFilters.category;
+      const matchesCountry = !appliedFilters.country || offer.geos.includes(appliedFilters.country);
+      const matchesName = !appliedFilters.name || offer.name.toLowerCase().includes(appliedFilters.name.toLowerCase());
+      const matchesId = !appliedFilters.id || offer.id.toLowerCase().includes(appliedFilters.id.toLowerCase());
+      return matchesCategory && matchesCountry && matchesName && matchesId;
     });
-  }, [searchQuery, activeTab, offers]);
+  }, [appliedFilters, offers]);
 
   const handleCopy = (text: string, keyName: string) => {
     navigator.clipboard.writeText(text);
@@ -248,6 +477,10 @@ export function OfferMarketplaceView({
   // RENDER SEPARATE OFFER DETAIL PAGE
   // ---------------------------------------------------------
   if (currentOffer) {
+    const deviceCompatibility = currentOffer.specs?.deviceCompatibility ?? currentOffer.devices ?? "";
+    const trackingProtocol = currentOffer.specs?.trackingProtocol ?? "S2S";
+    const adminNote = currentOffer.specs?.adminNote ?? "";
+
     return (
       <div className="space-y-6 font-sans animate-fadeIn" id="offer-details-view">
         
@@ -269,7 +502,7 @@ export function OfferMarketplaceView({
 
           <button
             onClick={() => setSelectedOfferId(null)}
-            className="bg-slate-900 border border-slate-800 text-slate-300 hover:text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition select-none cursor-pointer"
+            className="bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-950 px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition select-none cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Marketplace list
@@ -278,11 +511,11 @@ export function OfferMarketplaceView({
 
         {/* 🛑 ACTIVE WORKFLOW ALERTS AND BANNERS */}
         {isPending && (
-          <div className="bg-amber-950/60 text-amber-300 border border-amber-900 p-5 rounded-2xl flex items-start gap-3.5 shadow-md animate-pulse">
-            <Clock className="w-5 h-5 mt-0.5 text-amber-400 shrink-0" />
+          <div className="bg-amber-50 text-amber-800 border border-amber-200 p-5 rounded-2xl flex items-start gap-3.5 shadow-sm animate-pulse">
+            <Clock className="w-5 h-5 mt-0.5 text-amber-700 shrink-0" />
             <div className="space-y-1">
               <h4 className="text-sm font-bold uppercase tracking-wider font-mono">APPLICATION REVIEW PENDING</h4>
-              <p className="text-xs text-slate-300 leading-normal">
+              <p className="text-xs text-slate-700 leading-normal">
                 Your application for Campaign #{currentOffer.id} is under review by our representative Sophia Kovalski (Affiliate Rep). Tracking links, direct landers, and banner creative assets will unlock immediately upon security clearance of your promotion methods.
               </p>
             </div>
@@ -298,7 +531,7 @@ export function OfferMarketplaceView({
                 Unfortunately, access was declined during audits.
               </p>
               {currentOffer.rejectionReason && (
-                <div className="bg-slate-950 p-2.5 rounded border border-rose-900/30 text-[10px] text-rose-400 font-mono mt-1.5">
+                <div className="bg-rose-50 p-2.5 rounded border border-rose-200 text-[10px] text-rose-800 font-mono mt-1.5">
                   <strong>Declined Reason:</strong> {currentOffer.rejectionReason}
                 </div>
               )}
@@ -310,7 +543,7 @@ export function OfferMarketplaceView({
         )}
 
         {/* Dynamic header Banner */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-md relative">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm relative">
           
           <div className="lg:col-span-8 space-y-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -319,16 +552,20 @@ export function OfferMarketplaceView({
               </span>
               <span className={`text-[9px] font-bold font-mono px-2 py-0.5 rounded uppercase border ${
                 currentOffer.status === "open_access" 
-                  ? "bg-slate-950 text-emerald-400 border-slate-800" 
+                  ? "bg-slate-50 text-slate-800 border-slate-200" 
                   : currentOffer.status === "approved"
-                  ? "bg-emerald-950 text-emerald-300 border-emerald-900"
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-300"
                   : currentOffer.status === "pending_approval"
-                  ? "bg-amber-950 text-amber-300 border-amber-900"
+                  ? "bg-amber-50 text-amber-800 border-amber-300"
                   : currentOffer.status === "rejected"
-                  ? "bg-rose-950 text-rose-400 border-rose-900"
-                  : "bg-amber-950 text-amber-400 border-amber-900"
+                  ? "bg-rose-50 text-rose-800 border-rose-300"
+                  : "bg-amber-100 text-amber-800 border-amber-300"
               }`}>
-                {currentOffer.status === "requires_approval" ? "Approval Required" : currentOffer.status.replace("_", " ")}
+                {currentOffer.status === "requires_approval"
+                  ? "Approval Required"
+                  : currentOffer.status === "pending_approval"
+                  ? "Requested / Pending"
+                  : currentOffer.status.replace("_", " ")}
               </span>
             </div>
 
@@ -341,7 +578,7 @@ export function OfferMarketplaceView({
           </div>
 
           {/* Right quick stats summary */}
-          <div className="lg:col-span-4 bg-slate-950/80 p-4 rounded-xl border border-slate-850 flex flex-col justify-between space-y-4">
+          <div className="lg:col-span-4 bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col justify-between space-y-4">
             <div className="space-y-1">
               <span className="text-[10px] text-slate-500 uppercase tracking-wider font-mono font-bold block">
                 Approved Payout Rate
@@ -373,8 +610,8 @@ export function OfferMarketplaceView({
           <div className="lg:col-span-7 space-y-6">
             
             {/* GEOGRAPHIC GEO TARGET CHIPS */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
-              <strong className="text-white text-xs uppercase font-mono tracking-wider block">
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-sm">
+              <strong className="text-slate-950 text-xs uppercase font-mono tracking-wider block">
                 Allowed Geo Targets ({currentOffer.geos.length})
               </strong>
               <div className="flex flex-wrap gap-1.5">
@@ -391,9 +628,9 @@ export function OfferMarketplaceView({
             </div>
 
             {/* TRAFFIC RESTRICTIONS RULE CARD */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
-              <strong className="text-white text-xs uppercase font-mono tracking-wider block flex items-center gap-1.5 text-rose-450">
-                <AlertTriangle className="w-4 h-4 text-rose-400" />
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-sm">
+              <strong className="text-slate-950 text-xs uppercase font-mono tracking-wider block flex items-center gap-1.5 text-rose-600">
+                <AlertTriangle className="w-4 h-4 text-rose-500" />
                 Traffic Limitations (STRICT POLICY)
               </strong>
               
@@ -411,8 +648,8 @@ export function OfferMarketplaceView({
             {isAccessible ? (
               // Show Approved Landing Pages section ONLY if admin added landing pages to the offer
               currentOffer.landers && currentOffer.landers.length > 0 ? (
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3 animate-fadeIn">
-                  <strong className="text-white text-xs uppercase font-mono tracking-wider block text-emerald-400">
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 animate-fadeIn shadow-sm">
+                  <strong className="text-slate-950 text-xs uppercase font-mono tracking-wider block text-emerald-600">
                     ✓ Approved Landing Pages ({currentOffer.landers.length})
                   </strong>
 
@@ -446,8 +683,8 @@ export function OfferMarketplaceView({
             {isAccessible ? (
               // Show Available Media Assets & Banner Sizes ONLY if media assets exist
               currentOffer.creatives && currentOffer.creatives.length > 0 ? (
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3 animate-fadeIn">
-                  <strong className="text-white text-xs uppercase font-mono tracking-wider block text-emerald-400">
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 animate-fadeIn shadow-sm">
+                  <strong className="text-slate-950 text-xs uppercase font-mono tracking-wider block text-emerald-600">
                     ✓ Available Media Assets & Banner Sizes ({currentOffer.creatives.length})
                   </strong>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -475,9 +712,9 @@ export function OfferMarketplaceView({
 
             {/* DISCUSSION CHAT STREAM WITH MANAGER FOR PENDING & ACTIVE */}
             {!isRequiresApproval && (
-              <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3.5">
-                <strong className="text-white text-xs uppercase font-mono tracking-wider block flex items-center gap-1 text-cyan-400">
-                  <Info className="w-4 h-4 text-cyan-400" />
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3.5 shadow-sm">
+                <strong className="text-slate-950 text-xs uppercase font-mono tracking-wider block flex items-center gap-1 text-cyan-600">
+                  <Info className="w-4 h-4 text-cyan-600" />
                   Traffic Audit Message Dialogue
                 </strong>
 
@@ -523,7 +760,7 @@ export function OfferMarketplaceView({
             {isAccessible ? (
               <>
                 {/* SCREEN 9: TRACKING LINK GENERATOR */}
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 animate-fadeIn" id="tracking-link-generator-box">
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 animate-fadeIn shadow-sm" id="tracking-link-generator-box">
                   <div className="space-y-0.5">
                     <h3 className="text-white text-xs font-bold uppercase font-mono tracking-wider flex items-center gap-1.5">
                       <Link className="w-3.5 h-3.5 text-cyan-400" />
@@ -613,7 +850,7 @@ export function OfferMarketplaceView({
                 </div>
 
                 {/* SCREEN 10: DYNAMIC INSIDE POSTBACK SETUP */}
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 animate-fadeIn">
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 animate-fadeIn shadow-sm">
                   <div className="space-y-0.5">
                     <h3 className="text-white text-xs font-bold uppercase font-mono tracking-wider flex items-center gap-1.5">
                       <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-400" />
@@ -677,7 +914,7 @@ export function OfferMarketplaceView({
               </>
             ) : (
               /* RESTRICTED VIEWS OVERRIDES: Hide Link Generator workspace options, show requests center instead */
-              <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 text-center space-y-4">
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 text-center space-y-4 shadow-sm">
                 <Lock className="w-10 h-10 text-amber-500/80 mx-auto" />
                 <div className="space-y-1">
                   <h4 className="text-sm font-bold uppercase tracking-wider text-white font-mono">Tracking Links Restricted</h4>
@@ -710,24 +947,26 @@ export function OfferMarketplaceView({
             )}
 
             {/* QUICK PREVIEW SPEC SHEETS METRICS */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3 font-sans">
-              <strong className="text-white text-xs uppercase font-mono tracking-wider block">
-                Technical Spec Sheet
-              </strong>
-              <div className="space-y-2.5 text-xs">
-                <div className="flex justify-between border-b border-slate-850 pb-1.5">
-                  <span className="text-slate-505">Device compatibility:</span>
-                  <span className="text-slate-205 font-mono font-bold text-slate-200">{currentOffer.devices}</span>
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 font-sans shadow-sm">
+                <strong className="text-slate-950 text-xs uppercase font-mono tracking-wider block">
+                  Technical Specifications
+                </strong>
+                <div className="space-y-2.5 text-xs">
+                  <div className="flex justify-between border-b border-slate-850 pb-1.5">
+                    <span className="text-slate-505">Device Compatibility:</span>
+                    <span className="text-slate-205 font-mono font-bold text-slate-200">{deviceCompatibility}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-slate-850 pb-1.5">
+                    <span className="text-slate-505">Tracking Protocol:</span>
+                    <span className="text-slate-205 font-mono text-cyan-400">{trackingProtocol}</span>
+                  </div>
+                  {adminNote && adminNote.trim().length > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-505">Admin Note:</span>
+                      <span className="text-slate-700 font-mono">{adminNote}</span>
+                    </div>
+                  )}
                 </div>
-                <div className="flex justify-between border-b border-slate-850 pb-1.5">
-                  <span className="text-slate-505">Tracking Protocol:</span>
-                  <span className="text-slate-205 font-mono text-cyan-400">Affise Redirect v3 S2S</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-505">Publisher Commission:</span>
-                  <span className="text-emerald-400 font-bold font-mono">100% Guaranteed</span>
-                </div>
-              </div>
             </div>
 
           </div>
@@ -737,11 +976,11 @@ export function OfferMarketplaceView({
         {/* 🛡️ REQUEST ACCESS POPUP MODAL (EVERFLOW / TRACKIER-STYLE) */}
         {showRequestModal && (
           <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn" id="request-access-modal">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative space-y-4">
+            <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative space-y-4">
               
               <button
                 onClick={() => setShowRequestModal(false)}
-                className="absolute top-4 right-4 text-slate-400 hover:text-slate-950 dark:hover:text-white p-1.5 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 transition"
+                className="absolute top-4 right-4 text-slate-400 hover:text-white p-1.5 rounded-lg bg-slate-950 border border-slate-800 transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -857,7 +1096,7 @@ export function OfferMarketplaceView({
     <div className="space-y-6 font-sans animate-fadeIn" id="offers-list-view">
       
       {/* Intro banner */}
-      <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+      <div className="bg-white border border-slate-200 p-5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
         <div className="space-y-1">
           <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-1.5">
             <Briefcase className="w-5 h-5 text-cyan-400" />
@@ -875,53 +1114,98 @@ export function OfferMarketplaceView({
       </div>
 
       {/* FILTER SEARCH PANEL */}
-      <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-        
-        {/* Category Tabs */}
-        <div className="flex flex-wrap items-center gap-1">
-          {(["All", "App Install", "Crypto", "Finance", "E-commerce", "Nutra"] as const).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition ${
-                activeTab === tab 
-                  ? "bg-slate-950 text-cyan-400 font-bold border border-cyan-900/50"
-                  : "text-slate-400 hover:bg-slate-950/40 hover:text-slate-200"
-              }`}
+      <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
+          <div className="space-y-2">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Category</label>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="block w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 focus:border-cyan-500 focus:outline-none"
             >
-              {tab}
-            </button>
-          ))}
-        </div>
+              <option value="">All Categories</option>
+              {categories.map((category) => (
+                <option key={category} value={category}>{category}</option>
+              ))}
+            </select>
+          </div>
 
-        {/* Text Search Input */}
-        <div className="relative min-w-[240px] w-full md:w-auto">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
-          <input
-            type="text"
-            placeholder="Search campaign names..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="block w-full pl-9 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-300 text-xs focus:outline-none focus:border-cyan-500"
-          />
-        </div>
+          <div className="space-y-2">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Country</label>
+            <select
+              value={countryFilter}
+              onChange={(e) => setCountryFilter(e.target.value)}
+              className="block w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 focus:border-cyan-500 focus:outline-none"
+            >
+              {COUNTRY_OPTIONS.map((option) => (
+                <option key={option.value || "all"} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
 
+          <div className="space-y-2 md:col-span-2">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Offer Name</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search offer name..."
+                value={offerNameFilter}
+                onChange={(e) => setOfferNameFilter(e.target.value)}
+                className="block w-full rounded-xl border border-slate-200 bg-slate-50 px-10 py-2 text-sm text-slate-800 focus:border-cyan-500 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Offer ID</label>
+            <input
+              type="text"
+              placeholder="Search offer ID..."
+              value={offerIdFilter}
+              onChange={(e) => setOfferIdFilter(e.target.value)}
+              className="block w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 focus:border-cyan-500 focus:outline-none"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setAppliedFilters({ category: categoryFilter, country: countryFilter, name: offerNameFilter, id: offerIdFilter })}
+            className="h-12 rounded-xl bg-cyan-600 text-white text-xs font-semibold uppercase tracking-[0.24em] transition hover:bg-cyan-500"
+          >
+            SEARCH OFFERS
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setCategoryFilter("");
+              setCountryFilter("");
+              setOfferNameFilter("");
+              setOfferIdFilter("");
+              setAppliedFilters({ category: "", country: "", name: "", id: "" });
+            }}
+            className="h-12 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-semibold uppercase tracking-[0.24em] transition hover:bg-slate-50"
+          >
+            CLEAR FILTERS
+          </button>
+        </div>
       </div>
 
       {/* RESULTS LIST TABLE (Everflow / Trackier classic high-density design) */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
         
         {filteredOffers.length === 0 ? (
-          <div className="text-center py-12 text-slate-500 space-y-2 bg-slate-950/60">
+          <div className="text-center py-12 text-slate-500 space-y-2 bg-slate-50">
             <HelpCircle className="w-8 h-8 text-slate-700 mx-auto" />
-            <p className="text-sm font-mono">No matching campaign catalog records found.</p>
-            <p className="text-xs">Adjust search terms or reset category vertical filters above.</p>
+            <p className="text-sm font-mono">No offers found for selected filters.</p>
+            <p className="text-xs">Try resetting filters or choosing a different country or category.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-800 text-left">
               
-              <thead className="bg-slate-950 text-[10px] tracking-wider text-slate-400 font-mono uppercase">
+              <thead className="bg-slate-50 text-[10px] tracking-wider text-slate-500 font-mono uppercase">
                 <tr>
                   <th className="px-4 py-3 text-center w-14">ID</th>
                   <th className="px-4 py-3">Campaign Name & Category</th>
@@ -934,15 +1218,15 @@ export function OfferMarketplaceView({
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-slate-800 text-xs text-slate-300 leading-normal">
+              <tbody className="divide-y divide-slate-800 text-xs text-slate-700 leading-normal">
                 {filteredOffers.map((offer) => {
                   const isReadyToLink = offer.status === "open_access" || offer.status === "approved";
                   
                   return (
-                    <tr key={offer.id} className="hover:bg-slate-950/30 transition duration-100">
+                    <tr key={offer.id} className="hover:bg-slate-50 transition duration-100">
                       
                       {/* ID */}
-                      <td className="px-4 py-3.5 text-center font-mono text-slate-500 font-bold select-all bg-slate-950/20">
+                      <td className="px-4 py-3.5 text-center font-mono text-slate-500 font-bold select-all bg-slate-50">
                         {offer.id}
                       </td>
 
@@ -965,7 +1249,7 @@ export function OfferMarketplaceView({
                       <td className="px-4 py-3.5">
                         <div className="flex flex-wrap gap-1 max-w-[150px]">
                           {offer.geos.slice(0, 3).map((g: string) => (
-                            <span key={g} className="bg-slate-950 text-slate-400 px-1 py-0.2 rounded font-mono text-[9px] font-bold border border-slate-850">
+                            <span key={g} className="bg-slate-50 text-slate-600 px-1 py-0.2 rounded font-mono text-[9px] font-bold border border-slate-200">
                               {g}
                             </span>
                           ))}
@@ -983,7 +1267,7 @@ export function OfferMarketplaceView({
                       </td>
 
                       {/* Payout */}
-                      <td className="px-4 py-3.5 font-mono text-cyan-300 font-extrabold text-[13px]">
+                      <td className="px-4 py-3.5 font-mono text-slate-900 font-extrabold text-[13px]">
                         ${offer.payoutValue.toFixed(2)}
                       </td>
 
@@ -995,24 +1279,24 @@ export function OfferMarketplaceView({
                       {/* Status */}
                       <td className="px-4 py-3.5 font-mono">
                         {offer.status === "open_access" ? (
-                          <span className="bg-slate-950 text-slate-400 text-[8px] font-bold py-0.5 px-2 rounded uppercase tracking-wider border border-slate-850">
+                          <span className="bg-slate-50 text-slate-800 text-[8px] font-bold py-0.5 px-2 rounded uppercase tracking-wider border border-slate-200">
                             Open Access
                           </span>
                         ) : offer.status === "approved" ? (
-                          <span className="bg-emerald-950/60 text-emerald-400 text-[8px] font-bold py-0.5 px-2 rounded uppercase tracking-wider border border-emerald-900/50 flex items-center justify-center gap-0.5 w-fit">
-                            <CheckCircle className="w-2.5 h-2.5 text-emerald-400" />
+                          <span className="bg-emerald-50 text-emerald-800 text-[8px] font-bold py-0.5 px-2 rounded uppercase tracking-wider border border-emerald-300 flex items-center justify-center gap-0.5 w-fit">
+                            <CheckCircle className="w-2.5 h-2.5 text-emerald-700" />
                             Approved
                           </span>
                         ) : offer.status === "pending_approval" ? (
-                          <span className="bg-amber-950 text-amber-300 text-[8px] font-bold py-0.5 px-2 rounded uppercase tracking-wider border border-amber-900/50 animate-pulse">
-                            Pending Approval
+                          <span className="bg-amber-50 text-amber-800 text-[8px] font-bold py-0.5 px-2 rounded uppercase tracking-wider border border-amber-300 animate-pulse">
+                            Requested / Pending
                           </span>
                         ) : offer.status === "rejected" ? (
-                          <span className="bg-rose-955 text-rose-300 text-[8px] font-bold py-0.5 px-2 rounded uppercase tracking-wider border border-rose-900/50">
+                          <span className="bg-rose-50 text-rose-800 text-[8px] font-bold py-0.5 px-2 rounded uppercase tracking-wider border border-rose-300">
                             Rejected
                           </span>
                         ) : (
-                          <span className="bg-amber-950/60 text-amber-400 text-[8px] font-bold py-0.5 px-2 rounded uppercase tracking-wider border border-amber-900/50">
+                          <span className="bg-amber-100 text-amber-800 text-[8px] font-bold py-0.5 px-2 rounded uppercase tracking-wider border border-amber-300">
                             Requires Approval
                           </span>
                         )}
@@ -1031,14 +1315,14 @@ export function OfferMarketplaceView({
                           ) : offer.status === "requires_approval" ? (
                             <button
                               onClick={() => handleOpenRequestModal(offer.id)}
-                              className="bg-slate-950 border border-slate-850 hover:border-slate-800 text-slate-300 hover:text-white font-bold px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer select-none"
+                              className="bg-slate-50 border border-slate-200 hover:border-slate-300 text-slate-700 hover:text-slate-950 font-bold px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer select-none"
                             >
                               Request Access
                             </button>
                           ) : (
                             <button
                               onClick={() => setSelectedOfferId(offer.id)}
-                              className="bg-slate-950 border border-slate-800 hover:border-slate-705 text-slate-400 hover:text-white font-bold px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer"
+                              className="bg-slate-50 border border-slate-200 hover:border-slate-300 text-slate-600 hover:text-slate-950 font-bold px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer"
                             >
                               Inspect Specs
                             </button>

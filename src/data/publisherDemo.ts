@@ -242,8 +242,8 @@ export const DEMO_REPORTS: DemoReportRow[] = [
 export const REPLAY_TRAFFIC_LOGS = [
   { time: "11:41:02", offer: "NordVPNSecure", geo: "US", type: "click", status: "Redirected", sub1: "fb_campaign_9", sub2: "adgroup3" },
   { time: "11:40:44", offer: "Apex Trading App", geo: "DE", type: "click", status: "Redirected", sub1: "google_search", sub2: "mobile_ios" },
-  { time: "11:39:15", offer: "FastHomeLoan", geo: "US", type: "lead", status: "Converted", sub1: "native_network", payout: "$28.00" },
-  { time: "11:38:50", offer: "KetoDiet Shred", geo: "CA", type: "sale", status: "Converted", sub1: "insta_influencer", payout: "$65.00" },
+  { time: "11:39:15", offer: "FastHomeLoan", geo: "US", type: "conversion", status: "Converted", sub1: "native_network", payout: "$28.00" },
+  { time: "11:38:50", offer: "KetoDiet Shred", geo: "CA", type: "conversion", status: "Converted", sub1: "insta_influencer", payout: "$65.00" },
   { time: "11:38:12", offer: "NordVPNSecure", geo: "GB", type: "click", status: "Redirected", sub1: "newsletter_june", sub2: "banner" },
   { time: "11:37:41", offer: "CoinLedger crypto", geo: "SG", type: "click", status: "Duplicate IP Rejected", sub1: "tg_group_btc", error: "Duplicate Fingerprint" }
 ];
@@ -254,7 +254,9 @@ export const SYSTEM_POSTBACK_PLACEHOLDERS = [
   { token: "{payout}", desc: "Earned payout value generated in USD currency format" },
   { token: "{sub1}", desc: "First sub-affiliate custom parameter tracking segment" },
   { token: "{sub2}", desc: "Second sub-affiliate custom tracking segment" },
-  { token: "{transaction_id}", desc: "Attribution ledger record transaction security ID" },
+  { token: "{sub3}", desc: "Third sub-affiliate custom tracking segment" },
+  { token: "{sub4}", desc: "Fourth sub-affiliate custom tracking segment" },
+  { token: "{sub5}", desc: "Fifth sub-affiliate custom tracking segment" },
   { token: "{country}", desc: "Geographic country representation (ISO-2 code)" },
-  { token: "{ip}", desc: "Authentic remote client user IP address" }
+  { token: "{transaction_id}", desc: "Attribution ledger record transaction security ID" }
 ];

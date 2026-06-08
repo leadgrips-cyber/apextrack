@@ -68,20 +68,20 @@ export function NotificationsView({
   const getBadgeColor = (type: string) => {
     switch (type) {
       case "approved":
-        return "bg-emerald-950 text-emerald-300 border-emerald-905";
+        return "bg-emerald-100 text-emerald-800 border-emerald-300";
       case "rejected":
-        return "bg-rose-950 text-rose-300 border-rose-905";
+        return "bg-rose-100 text-rose-800 border-rose-300";
       case "requested":
-        return "bg-amber-950 text-amber-305 border-amber-900";
+        return "bg-amber-100 text-amber-800 border-amber-300";
       case "payout":
-        return "bg-cyan-950 text-cyan-300 border-cyan-905";
+        return "bg-cyan-50 text-cyan-700 border-cyan-200";
       case "paused":
-        return "bg-slate-950 text-slate-300 border-slate-905";
+        return "bg-slate-100 text-slate-800 border-slate-300";
       case "activated":
-        return "bg-sky-950 text-sky-300 border-sky-905";
+        return "bg-sky-100 text-sky-800 border-sky-200";
       case "announcement":
       default:
-        return "bg-indigo-950 text-indigo-300 border-indigo-905";
+        return "bg-indigo-100 text-indigo-800 border-indigo-300";
     }
   };
 
@@ -206,7 +206,7 @@ export function NotificationsView({
                     </p>
 
                     {notif.rejectionReason && (
-                      <div className="p-2.5 mt-2 bg-red-950/20 border border-red-900/40 text-[11px] text-rose-300 font-mono rounded-lg">
+                      <div className="p-2.5 mt-2 bg-rose-50 border border-rose-200 text-[11px] text-rose-800 font-mono rounded-lg">
                         <strong>REJECTION NOTES:</strong> {notif.rejectionReason}
                       </div>
                     )}

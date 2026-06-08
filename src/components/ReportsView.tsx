@@ -714,26 +714,26 @@ export function ReportsView() {
                 key={notif.id} 
                 className={`p-3 rounded-xl border flex flex-col justify-between space-y-2.5 relative transition-all duration-300 ${
                   notif.type === "approved" 
-                    ? "bg-emerald-950/20 border-emerald-900/60 text-emerald-300"
+                    ? "bg-emerald-50 border-emerald-200 text-slate-900"
                     : notif.type === "paused"
-                    ? "bg-amber-950/20 border-amber-900/60 text-amber-300"
+                    ? "bg-amber-50 border-amber-200 text-slate-900"
                     : notif.type === "rejected"
-                    ? "bg-rose-950/20 border-rose-900/60 text-rose-300"
+                    ? "bg-rose-50 border-rose-200 text-slate-900"
                     : notif.type === "payout"
-                    ? "bg-cyan-950/20 border-cyan-900/60 text-cyan-200"
-                    : "bg-slate-900 border-slate-800 text-slate-300"
+                    ? "bg-cyan-50 border-cyan-200 text-slate-900"
+                    : "bg-slate-50 border-slate-200 text-slate-900"
                 }`}
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-1.5 font-bold uppercase font-mono text-[9px] tracking-wider">
-                    {notif.type === "approved" && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
-                    {notif.type === "paused" && <PauseCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
-                    {notif.type === "rejected" && <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />}
-                    {notif.type === "payout" && <CreditCard className="w-3.5 h-3.5 text-cyan-400 shrink-0" />}
-                    {notif.type === "announcement" && <Megaphone className="w-3.5 h-3.5 text-indigo-400 shrink-0" />}
+                    {notif.type === "approved" && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                    {notif.type === "paused" && <PauseCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />}
+                    {notif.type === "rejected" && <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />}
+                    {notif.type === "payout" && <CreditCard className="w-3.5 h-3.5 text-cyan-600 shrink-0" />}
+                    {notif.type === "announcement" && <Megaphone className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
                     <span>{notif.title}</span>
                   </div>
-                  <p className="text-[10px] leading-normal opacity-90">{notif.text}</p>
+                  <p className="text-[10px] leading-normal text-slate-700">{notif.text}</p>
                 </div>
                 <span className="block text-[8px] font-mono text-slate-400 text-right">{notif.time}</span>
               </div>

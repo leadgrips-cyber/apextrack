@@ -1,0 +1,166 @@
+import * as publisherRepository from "../repositories/publisher.repository.js";
+import { OfferApplicationRecord } from "../types/application.js";
+import { TrackingLinkRecord } from "../types/tracking.js";
+
+export interface PublisherPerformanceSummary {
+  total_clicks: number;
+  total_conversions: number;
+  total_revenue: number;
+  total_payout: number;
+}
+
+export interface PublisherSummaryResult {
+  publisher: Omit<publisherRepository.PublisherAdminRecord, 'total_clicks' | 'total_conversions' | 'total_revenue' | 'total_payout'> & PublisherPerformanceSummary;
+}
+
+export interface PublisherListResult {
+  publishers: Array<Omit<publisherRepository.PublisherAdminRecord, 'total_clicks' | 'total_conversions' | 'total_revenue' | 'total_payout'> & PublisherPerformanceSummary>;
+  pagination: {
+    total: number;
+    page: number;
+    pageSize: number;
+  };
+}
+
+const VALID_ACCOUNT_STATUSES = ['pending', 'active', 'suspended', 'blocked'] as const;
+type AccountStatus = typeof VALID_ACCOUNT_STATUSES[number];
+
+function normalizeStatus(status?: string): string | undefined {
+  if (!status || typeof status !== 'string') {
+    return undefined;
+  }
+
+  const normalized = status.trim().toLowerCase();
+  if (normalized === 'pending') return 'PENDING';
+  if (normalized === 'active') return 'ACTIVE';
+  if (normalized === 'suspended') return 'SUSPENDED';
+  if (normalized === 'blocked') return 'DEACTIVATED';
+  return undefined;
+}
+
+function formatStatus(status: string): string {
+  if (status === 'DEACTIVATED') return 'blocked';
+  return String(status).toLowerCase();
+}
+
+function sanitizePublisherRow(
+  row: publisherRepository.PublisherAdminRecord
+): Omit<publisherRepository.PublisherAdminRecord, 'total_clicks' | 'total_conversions' | 'total_revenue' | 'total_payout'> & PublisherPerformanceSummary {
+  return {
+    id: row.id,
+    email: row.email,
+    login_name: row.login_name,
+    full_name: row.full_name,
+    company_name: row.company_name,
+    country_code: row.country_code,
+    timezone: row.timezone,
+    account_status: formatStatus(row.account_status),
+    approval_status: row.approval_status,
+    assigned_manager_id: row.assigned_manager_id,
+    affiliate_code: row.affiliate_code,
+    is_active: row.is_active,
+    currency: row.currency,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    approved_at: row.approved_at,
+    rejected_reason: row.rejected_reason,
+    total_clicks: Number(row.total_clicks),
+    total_conversions: Number(row.total_conversions),
+    total_revenue: Number(row.total_revenue),
+    total_payout: Number(row.total_payout),
+  };
+}
+
+function validateStatusValue(status?: string): asserts status is AccountStatus {
+  if (!status) {
+    throw new Error('Status value is required');
+  }
+
+  const normalized = status.trim().toLowerCase();
+  if (!VALID_ACCOUNT_STATUSES.includes(normalized as AccountStatus)) {
+    throw new Error('Invalid status value');
+  }
+}
+
+export async function listPublishers(filters: publisherRepository.PublisherListFilters): Promise<PublisherListResult> {
+  const raw = await publisherRepository.findPublishers(filters);
+  return {
+    publishers: raw.publishers.map(sanitizePublisherRow),
+    pagination: {
+      total: raw.total,
+      page: raw.page,
+      pageSize: raw.pageSize,
+    },
+  };
+}
+
+export async function getPublisherDetails(publisherId: string) {
+  const publisher = await publisherRepository.findPublisherById(publisherId);
+  if (!publisher) {
+    throw new Error('Publisher not found');
+  }
+  return sanitizePublisherRow(publisher);
+}
+
+export async function approvePublisher(publisherId: string) {
+  const updated = await publisherRepository.updatePublisherStatus(publisherId, {
+    account_status: 'ACTIVE',
+    approval_status: 'APPROVED',
+    is_active: true,
+    approved_at: new Date().toISOString(),
+    rejected_reason: null,
+  });
+  if (!updated) {
+    throw new Error('Publisher not found');
+  }
+  return sanitizePublisherRow(updated);
+}
+
+export async function suspendPublisher(publisherId: string) {
+  const updated = await publisherRepository.updatePublisherStatus(publisherId, {
+    account_status: 'SUSPENDED',
+    is_active: false,
+  });
+  if (!updated) {
+    throw new Error('Publisher not found');
+  }
+  return sanitizePublisherRow(updated);
+}
+
+export async function reactivatePublisher(publisherId: string) {
+  const updated = await publisherRepository.updatePublisherStatus(publisherId, {
+    account_status: 'ACTIVE',
+    is_active: true,
+  });
+  if (!updated) {
+    throw new Error('Publisher not found');
+  }
+  return sanitizePublisherRow(updated);
+}
+
+export async function blockPublisher(publisherId: string) {
+  const updated = await publisherRepository.updatePublisherStatus(publisherId, {
+    account_status: 'DEACTIVATED',
+    is_active: false,
+  });
+  if (!updated) {
+    throw new Error('Publisher not found');
+  }
+  return sanitizePublisherRow(updated);
+}
+
+export async function getPublisherWallet(publisherId: string): Promise<publisherRepository.PublisherWalletRecord> {
+  const wallet = await publisherRepository.findPublisherWallet(publisherId);
+  if (!wallet) {
+    throw new Error('Wallet not found for publisher');
+  }
+  return wallet;
+}
+
+export async function listPublisherApplications(publisherId: string): Promise<OfferApplicationRecord[]> {
+  return publisherRepository.findPublisherApplicationsByPublisher(publisherId);
+}
+
+export async function listPublisherTrackingLinks(publisherId: string): Promise<TrackingLinkRecord[]> {
+  return publisherRepository.findPublisherTrackingLinksByPublisher(publisherId);
+}

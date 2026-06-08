@@ -31,21 +31,21 @@ export function PublisherSidebar({ activeScreen, setActiveScreen, onLogout, publ
   
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutGrid, premium: false },
-    { id: "marketplace", label: "Offer Marketplace", icon: Globe, premium: false },
+    { id: "marketplace", label: "All Offers", icon: Globe, premium: false },
     { id: "my-offers", label: "My Offers", icon: CheckCircle, premium: false },
-    { id: "notifications", label: "Notifications", icon: Bell, premium: false, isBadge: true },
-    { id: "announcements", label: "Announcements", icon: Megaphone, premium: false },
+    { id: "reports", label: "Reports Ledger", icon: BarChart3, premium: false },
     { id: "link-generator", label: "Tracking Links", icon: Link2, premium: false },
     { id: "postbacks", label: "Postback Setup", icon: Radio, premium: false },
+    { id: "notifications", label: "Notifications", icon: Bell, premium: false, isBadge: true },
+    { id: "announcements", label: "Announcements", icon: Megaphone, premium: false },
     { id: "api-access", label: "API Access Tokens", icon: Key, premium: true },
-    { id: "reports", label: "Reports Ledger", icon: BarChart3, premium: false },
     { id: "wallet", label: "My Wallet Balance", icon: Wallet, premium: false },
     { id: "invoices", label: "Invoices & Billing", icon: FileText, premium: false },
     { id: "profile", label: "Profile Settings", icon: Settings, premium: false }
   ];
 
   return (
-    <aside className="w-68 theme-bg-card border-r theme-border flex flex-col h-screen shrink-0 font-sans shadow-xs" id="publisher-sidebar">
+    <aside className="w-68 bg-white border-r border-slate-200 flex flex-col h-screen shrink-0 font-sans shadow-sm" id="publisher-sidebar">
       
       {/* Brand Header */}
       <div className="p-5 border-b theme-border flex items-center justify-between">
@@ -62,7 +62,7 @@ export function PublisherSidebar({ activeScreen, setActiveScreen, onLogout, publ
             </span>
           </div>
         </div>
-        <span className="bg-cyan-150 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-400 text-[8px] font-mono px-1.5 py-0.5 rounded border border-cyan-300 dark:border-cyan-900 font-bold">
+        <span className="bg-cyan-100 text-cyan-700 text-[8px] font-mono px-1.5 py-0.5 rounded border border-cyan-200 font-bold">
           LIVE
         </span>
       </div>
@@ -153,7 +153,7 @@ export function PublisherSidebar({ activeScreen, setActiveScreen, onLogout, publ
       </div>
 
       {/* Footer Log Out Area */}
-      <div className="p-4 border-t theme-border flex items-center justify-between bg-slate-500/5 shrink-0">
+      <div className="p-4 border-t border-slate-200 flex items-center justify-between bg-slate-50 shrink-0">
         <button
           onClick={onLogout}
           className="theme-text-muted hover:theme-text-main hover:text-rose-650 dark:hover:text-rose-400 text-xs font-semibold flex items-center gap-2 cursor-pointer transition select-none outline-none"

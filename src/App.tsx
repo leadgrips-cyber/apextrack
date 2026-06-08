@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import * as authApi from "./services/auth";
 import { PublisherAuth } from "./components/PublisherAuth";
 import { PublisherSidebar } from "./components/PublisherSidebar";
 import { PublisherDashboardView } from "./components/PublisherDashboardView";
@@ -45,7 +46,28 @@ export default function App() {
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<DemoInvoice | null>(null);
   const [publisherName, setPublisherName] = useState("John Doe Media INC");
+useEffect(() => {
+  const loadUser = async () => {
+    const token = localStorage.getItem("token");
 
+    if (!token) {
+      setIsLoggedIn(false);
+      return;
+    }
+
+    try {
+      const user = await authApi.getCurrentUser();
+
+      setPublisherName(user.fullName || user.companyName || "Publisher");
+      setIsLoggedIn(true);
+    } catch (error) {
+      console.error(error);
+      setIsLoggedIn(false);
+    }
+  };
+
+  loadUser();
+}, []);
   // Statefully manage offers to allow interactive publisher approval workflow
   const [offers, setOffers] = useState<any[]>(() => {
     return [
@@ -474,8 +496,9 @@ export default function App() {
               activeScreen={activeScreen}
               setActiveScreen={(screen) => {
                 setActiveScreen(screen);
-                // Clear selected offer view when moving away from marketplace tab
-                if (screen !== "marketplace") setSelectedOfferId(null);
+                 // Always clear detail view states when navigating via sidebar
+                 setSelectedOfferId(null);
+                 setSelectedInvoice(null);
               }}
               publisherName={publisherName}
               unreadNotificationsCount={notifications.filter(n => !n.isRead).length}
@@ -549,19 +572,19 @@ export default function App() {
 
             {/* Mobile Header navigation layout overlay */}
             {mobileMenuOpen && (
-              <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-40 lg:hidden flex flex-col p-6 space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-850 pb-4">
+              <div className="absolute inset-0 bg-slate-50/95 backdrop-blur-md z-40 lg:hidden flex flex-col p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-4">
                   <div className="flex items-center gap-2">
                     <div className="bg-cyan-500 text-slate-950 p-2 rounded-lg font-black shrink-0">
                       <Layers className="w-4 h-4" />
                     </div>
-                    <span className="text-sm font-black text-white font-mono uppercase">
-                      Apex<span className="text-cyan-400">Track</span>
+                    <span className="text-sm font-black text-slate-950 font-mono uppercase">
+                      Apex<span className="text-cyan-600">Track</span>
                     </span>
                   </div>
                   <button
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-slate-400 hover:text-rose-400 p-1 bg-slate-900 rounded-lg"
+                    className="text-slate-600 hover:text-rose-600 p-1 bg-slate-100 rounded-lg"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -570,26 +593,29 @@ export default function App() {
                 <div className="flex flex-col space-y-2 overflow-y-auto pr-1">
                   {[
                     { id: "dashboard", label: "Dashboard" },
-                    { id: "marketplace", label: "Offer Marketplace" },
+                    { id: "marketplace", label: "All Offers" },
                     { id: "my-offers", label: "My Offers" },
-                    { id: "notifications", label: "Notifications" },
-                    { id: "announcements", label: "Announcements" },
+                    { id: "reports", label: "Reports Ledger" },
                     { id: "link-generator", label: "Tracking Links" },
                     { id: "postbacks", label: "Postback Setup" },
+                    { id: "notifications", label: "Notifications" },
+                    { id: "announcements", label: "Announcements" },
                     { id: "api-access", label: "API Access Tokens" },
-                    { id: "reports", label: "Reports Ledger" },
-                    { id: "wallet", label: "Disbursement Wallet" },
-                    { id: "profile", label: "Profile settings" }
+                    { id: "wallet", label: "My Wallet Balance" },
+                    { id: "invoices", label: "Invoices & Billing" },
+                    { id: "profile", label: "Profile Settings" }
                   ].map((it) => (
                     <button
                       key={it.id}
                       onClick={() => {
                         setActiveScreen(it.id);
-                        if (it.id !== "marketplace") setSelectedOfferId(null);
+                          // Always clear detail view states when navigating via mobile menu
+                          setSelectedOfferId(null);
+                          setSelectedInvoice(null);
                         setMobileMenuOpen(false);
                       }}
                       className={`w-full text-left py-2.5 px-4 rounded-xl text-xs font-semibold ${
-                        activeScreen === it.id ? "bg-slate-900 border border-slate-850 text-cyan-400" : "text-slate-400 hover:text-white"
+                        activeScreen === it.id ? "bg-cyan-600 border border-cyan-600 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
                       }`}
                     >
                       {it.label}
@@ -597,7 +623,7 @@ export default function App() {
                   ))}
                 </div>
 
-                <div className="pt-4 border-t border-slate-850 flex items-center justify-between">
+                <div className="pt-4 border-t border-slate-200 flex items-center justify-between">
                   <span className="text-[10px] text-slate-500 font-mono">Affiliate ID: #2081</span>
                   <button
                     onClick={() => {

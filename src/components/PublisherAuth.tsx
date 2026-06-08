@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import * as authApi from "../services/auth";
 import { 
   ShieldCheck, 
   Mail, 
@@ -77,28 +78,24 @@ export function PublisherAuth({ currentView, setView, onLoginSuccess }: Publishe
   const [verifyCode, setVerifyCode] = useState("");
 
   // Handle standard Login Submission
-  const handleLoginSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setErrorMessage("");
-    setSuccessMessage("");
+const handleLoginSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    setTimeout(() => {
-      setIsLoading(false);
-      if (!loginEmail.includes("@")) {
-        setErrorMessage("Please enter a valid business email address.");
-        return;
-      }
-      if (loginPassword.length < 4) {
-        setErrorMessage("Invalid credentials security signature.");
-        return;
-      }
+  setErrorMessage("");
+  setSuccessMessage("");
+  setIsLoading(true);
 
-      // Successful login simulation
-      onLoginSuccess(loginEmail);
-      setView("app");
-    }, 800);
-  };
+  try {
+    await authApi.login(loginEmail, loginPassword);
+
+    onLoginSuccess(loginEmail);
+    setView("app");
+  } catch (error: any) {
+    setErrorMessage(error.message || "Login failed");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // Move forward in registration steps
   const nextRegisterStep = () => {
@@ -153,7 +150,7 @@ export function PublisherAuth({ currentView, setView, onLoginSuccess }: Publishe
   };
 
   // Handle registration final submit
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+ const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
     setSuccessMessage("");
@@ -169,17 +166,26 @@ export function PublisherAuth({ currentView, setView, onLoginSuccess }: Publishe
       return;
     }
 
-    setCaptchaError(false);
-    setIsLoading(true);
+   setCaptchaError(false);
+setIsLoading(true);
 
-    setTimeout(() => {
-      setIsLoading(false);
-      // Auto register simulates login activation route
-      setSuccessMessage("Application submitted! Your multi-step publisher proposal is under review. PIN disptached for session verification: APEX-9851");
-      setView("verify");
-    }, 1200);
-  };
+try {
+  await authApi.register(
+    registerEmail,
+    registerPassword,
+    `${firstName} ${lastName}`,
+    registerEmail.split("@")[0],
+    companyName
+  );
 
+  setSuccessMessage("Registration successful!");
+  setView("login");
+} catch (error: any) {
+  setErrorMessage(error.message || "Registration failed");
+} finally {
+  setIsLoading(false);
+}
+};
   const handleForgotPassword = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);

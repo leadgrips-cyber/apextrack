@@ -1,28 +1,55 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import * as authApi from "../services/auth";
 import { User, Mail, ShieldAlert, Settings, Sliders, CheckCircle, Phone, Globe, MapPin, Building, Hash, Lock, ShieldCheck } from "lucide-react";
 
 export function ProfileSettingsView() {
   // Personal & Company Information state
-  const [firstName, setFirstName] = useState("John");
-  const [lastName, setLastName] = useState("Doe");
-  const [email, setEmail] = useState("demo@apextrack.net");
-  const [phone, setPhone] = useState("+1 (555) 234-5678");
-  const [companyName, setCompanyName] = useState("John Doe Media INC");
-  const [website, setWebsite] = useState("https://highconversionmedia.com");
-  const [taxId, setTaxId] = useState("US-99-1234567");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [website, setWebsite] = useState("");
+  const [taxId, setTaxId] = useState("");
 
   // Messaging channels
-  const [telegram, setTelegram] = useState("@johndoe_traffic");
-  const [teamsId, setTeamsId] = useState("teams.johndoe_media");
-  const [whatsApp, setWhatsApp] = useState("+1 (555) 987-6543");
+  const [telegram, setTelegram] = useState("");
+  const [teamsId, setTeamsId] = useState("");
+  const [whatsApp, setWhatsApp] = useState("");
 
   // Geographical Address info
-  const [address, setAddress] = useState("120 Performance Way, Suite 400");
-  const [city, setCity] = useState("Wilmington");
-  const [stateName, setStateName] = useState("Delaware");
-  const [country, setCountry] = useState("United States");
-  const [postalCode, setPostalCode] = useState("19801");
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [stateName, setStateName] = useState("");
+  const [country, setCountry] = useState("");
+  const [postalCode, setPostalCode] = useState("");
 
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const user = await authApi.getCurrentUser();
+
+        setFirstName(user.fullName?.split(" ")[0] || "");
+        setLastName(user.fullName?.split(" ").slice(1).join(" ") || "");
+        setEmail(user.email || "");
+        setCompanyName(user.companyName || "");
+        setPhone(user.phone || "");
+        setWebsite(user.website || "");
+        setTelegram(user.telegram || "");
+        setTeamsId(user.teamsId || "");
+        setWhatsApp(user.whatsapp || "");
+        setAddress(user.address || "");
+        setCity(user.city || "");
+        setStateName(user.stateName || "");
+        setCountry(user.country || "");
+        setPostalCode(user.postalCode || "");
+      } catch (error) {
+        console.error("Profile load failed", error);
+      }
+    };
+
+    loadProfile();
+  }, []);
   // Security Credentials fields
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -36,11 +63,29 @@ export function ProfileSettingsView() {
   const [pwdSuccess, setPwdSuccess] = useState(false);
   const [pwdError, setPwdError] = useState("");
 
-  const handleUpdateProfile = (e: React.FormEvent) => {
+  const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    setProfileSuccess(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setTimeout(() => setProfileSuccess(false), 3000);
+
+    try {
+      await authApi.updateProfile({
+        phone,
+        website,
+        telegram,
+        teamsId,
+        whatsapp: whatsApp,
+        address,
+        city,
+        stateName,
+        country,
+        postalCode,
+      });
+
+      setProfileSuccess(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setTimeout(() => setProfileSuccess(false), 3000);
+    } catch (error) {
+      console.error('Profile update failed', error);
+    }
   };
 
   const handleUpdatePassword = (e: React.FormEvent) => {
