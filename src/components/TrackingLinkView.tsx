@@ -1,16 +1,28 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link2, Copy, Check, Info, Sliders, Server, HelpCircle, Layers } from "lucide-react";
-import { DEMO_OFFERS } from "../data/publisherDemo";
 
-export function TrackingLinkView() {
-  const approvedOffers = useMemo(() => DEMO_OFFERS.filter(o => o.status === "active"), []);
+interface TrackingLinkViewProps {
+  offers: any[];
+}
+
+export function TrackingLinkView({ offers }: TrackingLinkViewProps) {
+  const approvedOffers = useMemo(
+    () => offers.filter((o) => o.status === "open_access" || o.status === "approved"),
+    [offers]
+  );
   
-  const [selectedOfferId, setSelectedOfferId] = useState(approvedOffers[0]?.id || "");
+  const [selectedOfferId, setSelectedOfferId] = useState<string>("");
   const [sub1, setSub1] = useState("");
   const [sub2, setSub2] = useState("");
   const [sub3, setSub3] = useState("");
   const [sub4, setSub4] = useState("");
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!selectedOfferId && approvedOffers.length > 0) {
+      setSelectedOfferId(approvedOffers[0].id);
+    }
+  }, [approvedOffers, selectedOfferId]);
 
   // Active target candidate
   const activeOfferObj = useMemo(() => {

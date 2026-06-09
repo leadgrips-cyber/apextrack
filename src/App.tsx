@@ -15,6 +15,50 @@ import { InvoiceDetailModal } from "./components/InvoiceDetailModal";
 import { ProfileSettingsView } from "./components/ProfileSettingsView";
 import { NotificationsView, PublisherNotification } from "./components/NotificationsView";
 import { AnnouncementsView, NetworkAnnouncement } from "./components/AnnouncementsView";
+import {
+  AdminLayout,
+  AdminDashboardView as AdminDashboardUI,
+  AdminPublisherManagementView,
+  AdminOfferManagementView,
+  AdminApplicationReviewView,
+  AffiliateListView,
+  AffiliateProfileView,
+  AffiliateCreateView,
+  AffiliatePostbacksView,
+  AffiliateBillingView,
+  PostbackTestView,
+  ManagerListView,
+  ManagerCreateView,
+  ManagerAssignView,
+  ManagerPerformanceView as AdminManagerPerformanceView,
+  AdvertiserListView,
+  AdvertiserCreateView,
+  AdvertiserBillingView,
+  AdvertiserReportsView,
+  ReportsDailyView,
+  ReportsClickView,
+  ReportsConversionView,
+  FinanceRevenueView,
+  FinancePayoutsView,
+  FinanceInvoicesView,
+  SystemSettingsView,
+} from "./components/admin";
+import {
+  ManagerLayout,
+  ManagerDashboardView,
+  ManagerPublisherReviewView,
+  ManagerOfferApprovalView,
+  ManagerCommunicationView,
+  ManagerPerformanceView,
+} from "./components/manager";
+import {
+  AdvertiserLayout,
+  AdvertiserDashboardView,
+  AdvertiserCampaignManagementView,
+  AdvertiserConversionTrackingView,
+  AdvertiserBillingWalletView,
+  AdvertiserReportsView as AdvertiserPortalReportsView,
+} from "./components/advertiser";
 
 import { DEMO_INVOICES, DemoInvoice } from "./data/publisherDemo";
 import { 
@@ -45,6 +89,7 @@ export default function App() {
   // Custom deep campaign states
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<DemoInvoice | null>(null);
+  const [selectedAffiliate, setSelectedAffiliate] = useState<any | null>(null);
   const [publisherName, setPublisherName] = useState("John Doe Media INC");
 useEffect(() => {
   const loadUser = async () => {
@@ -69,172 +114,74 @@ useEffect(() => {
   loadUser();
 }, []);
   // Statefully manage offers to allow interactive publisher approval workflow
-  const [offers, setOffers] = useState<any[]>(() => {
-    return [
-      {
-        id: "1092",
-        name: "NordVPNSecure - Multi Device CPA (WW)",
-        category: "App Install",
-        payoutType: "CPA",
-        payoutValue: 3.80,
-        currency: "USD",
-        geos: ["US", "CA", "DE", "FR", "GB", "AU"],
-        status: "open_access",
-        description: "NordVPNSecure is the leading privacy platform. User must download the desktop/mobile application, register, and complete a premium subscription start (1-month or higher). Immediate tracking conversion postback setup available.",
-        rawUrl: "https://nordvpnsecure-tracker.com/landing?aff=apextrack",
-        trafficRestrictions: ["No Incentivized traffic", "No Search Brand bidding", "No Popunder with auto-download", "Adult traffic allowed with warnings"],
-        devices: "Desktop, MacBook, iPhone, Android TV",
-        caps: "100 conversions / daily cap limit per publisher",
-        previewUrl: "https://nordvpnsecure.example.com",
-        landers: [
-          { id: "lan-1", name: "Default High Converting Lander (Squeeze Page)", url: "https://nordvpnsecure.example.com/lander1" },
-          { id: "lan-2", name: "Cybersecurity Threat Alert Lander", url: "https://nordvpnsecure.example.com/lander2" },
-          { id: "lan-3", name: "68% Off Special Event Landing", url: "https://nordvpnsecure.example.com/lander3" }
-        ],
-        creatives: [
-          { id: "cr-1", name: "NordVPN Premium Banner Clean Blue", size: "300x250", type: "Display GIF" },
-          { id: "cr-2", name: "Cyber Protection Threat Animated Widget", size: "728x90", type: "HTML5 Creative" },
-          { id: "cr-3", name: "Privacy First Device Slider", size: "160x600", type: "Static PNG" }
-        ]
-      },
-      {
-        id: "1093",
-        name: "CoinLedger crypto - Decentralized wallet SignUp",
-        category: "Crypto",
-        payoutType: "CPL",
-        payoutValue: 12.50,
-        currency: "USD",
-        geos: ["US", "GB", "NL", "SG", "CH", "AE"],
-        status: "requires_approval",
-        description: "Premium cryptographic smart wallet registration flow. Verified Email + Phone number is required for user account clearance. Double-enrollment fraud checks will void double IP accounts instantly.",
-        rawUrl: "https://coinledger.cryptotrx.com/ref?aid=apex",
-        trafficRestrictions: ["Strictly No Fraud", "No Email spamming/scraping", "No incentivized virtual currencies integration"],
-        devices: "Smartphones & Mobile Browsers Only",
-        caps: "25 leads daily cap. Request AM check-in for cap updates.",
-        previewUrl: "https://coinledger.example.com",
-        landers: [
-          { id: "lan-4", name: "Dynamic Cryptographic App Store Squeeze", url: "https://coinledger.example.com/lander" },
-          { id: "lan-5", name: "Beta Wallet SignUp Survey", url: "https://coinledger.example.com/survey" }
-        ],
-        creatives: [
-          { id: "cr-4", name: "CoinLedger Mobile app Appstore Banner", size: "320x50", type: "Static PNG" },
-          { id: "cr-5", name: "Decentralized Crypto wallet 3D Visualizer", size: "300x250", type: "Display GIF" }
-        ]
-      },
-      {
-        id: "1094",
-        name: "Apex Trading App - Mobile Install (iOS/Android)",
-        category: "Finance",
-        payoutType: "CPI",
-        payoutValue: 4.20,
-        currency: "USD",
-        geos: ["US", "CA", "GB", "IE", "DE", "JP"],
-        status: "open_access",
-        description: "Install, open, and register an active user profile within Apex Trading App. Multi-attribute tracking converts instantly when user finishes verification.",
-        rawUrl: "https://apex-trading.tracker.com/app",
-        trafficRestrictions: ["Only mobile traffic", "Ad-wrappers blocked", "No incentivized signups"],
-        devices: "iOS Touch devices, Android OS build v10+",
-        caps: "500 installs / daily limit",
-        previewUrl: "https://apextrading.example.com/app",
-        landers: [
-          { id: "lan-6", name: "Direct App Store DeepLink", url: "https://apextrading.example.com/appstore-deep" },
-          { id: "lan-7", name: "Introductory Trading Platform Lander", url: "https://apextrading.example.com/main" }
-        ],
-        creatives: [
-          { id: "cr-6", name: "Finance Chart Static Banner", size: "300x250", type: "Static PNG" },
-          { id: "cr-7", name: "Interactive Stock Selector Panel", size: "300x600", type: "HTML5 Interactive" }
-        ]
-      },
-      {
-        id: "1095",
-        name: "FastHomeLoan - Instant Cash Lead Quote",
-        category: "Finance",
-        payoutType: "CPL",
-        payoutValue: 28.00,
-        currency: "USD",
-        geos: ["US", "CA"],
-        status: "open_access",
-        description: "Mortgage refinance and home loan short quote. Homeowners must submit valid social-proof details, contact address, and request pre-approval.",
-        rawUrl: "https://fasthomeloan-preapprovals.com/cpa",
-        trafficRestrictions: ["US Target Only", "No Co-registration lists", "No Craigslist traffic allowed"],
-        devices: "PCs and Mobile web browsers",
-        caps: "No Maximum Daily Caps",
-        previewUrl: "https://fasthomeloan.example.com",
-        landers: [
-          { id: "lan-8", name: "Zip-Code Fast Form Lead Screen", url: "https://fasthomeloan.example.com/zipform" }
-        ],
-        creatives: [
-          { id: "cr-8", name: "Get Home Loan Rates Standard Header", size: "728x90", type: "Static PNG" },
-          { id: "cr-9", name: "Fast Refinance Calculator Box", size: "300x250", type: "Static PNG" }
-        ]
-      },
-      {
-        id: "1096",
-        name: "KetoDiet Shred - CPS Health Offer (WW)",
-        category: "Nutra",
-        payoutType: "CPS",
-        payoutValue: 65.00,
-        currency: "USD",
-        geos: ["US", "CA", "GB", "DE", "FR", "ES", "IT", "BR", "MX"],
-        status: "open_access",
-        description: "High-paying weight loss and nutrition supplement offer. Convert user purchases securely using CC or local wallet gateways. Conversion registers instantly upon order verification.",
-        rawUrl: "https://ketoshred-retail.com/payout",
-        trafficRestrictions: ["No Fake Celebrity Endorsements", "No spam message alerts"],
-        devices: "All Devices compatible with browser cookie tracking",
-        caps: "Unlimited, premium traffic scaling approved",
-        previewUrl: "https://ketoshred.example.com",
-        landers: [
-          { id: "lan-9", name: "Medical Weightloss Editorial Quiz", url: "https://ketoshred.example.com/quizl" },
-          { id: "lan-10", name: "Keto Diet Direct Product Purchase", url: "https://ketoshred.example.com/checkout" }
-        ],
-        creatives: [
-          { id: "cr-10", name: "Before-After Diet Progression Grid", size: "300x250", type: "Static JPG" },
-          { id: "cr-11", name: "Summer Fitness Checklist Squeeze Card", size: "160x600", type: "Display GIF" }
-        ]
-      },
-      {
-        id: "1097",
-        name: "SaaS Enterprise CRM - 14-Day Free Trial Sign-Up",
-        category: "CPA Lead",
-        payoutType: "CPL",
-        payoutValue: 8.50,
-        currency: "USD",
-        geos: ["US", "GB", "CA", "DE", "FR", "SG", "AU"],
-        status: "requires_approval",
-        description: "Integrate premium B2B workflows. Small-business owners can register for a 14-day fully featured dashboard trial. Only company domains clearance verified, free-tier registration tracking enabled.",
-        rawUrl: "https://saascrm.example.com/join",
-        trafficRestrictions: ["B2B Traffic Only", "No Search Engine Trademark bidding keywords", "No Incentives allowed"],
-        devices: "Desktop Only (Chrome, Firefox, Safari desktop builds)",
-        caps: "50 daily conversion approvals",
-        previewUrl: "https://saascrm.example.com",
-        landers: [
-          { id: "lan-11", name: "SaaS Main Pricing Comparison Matrix", url: "https://saascrm.example.com/pricing" },
-          { id: "lan-12", name: "Enterprises CRM Demo Video Lander", url: "https://saascrm.example.com/demo" }
-        ],
-        creatives: [
-          { id: "cr-12", name: "CRM Modern Platform UI Dashboard Snippet", size: "300x250", type: "Display GIF" }
-        ]
-      },
-      {
-        id: "1098",
-        name: "Luxury Essentials - Premium Apparel Shop Sale",
-        category: "E-commerce",
-        payoutType: "CPS",
-        payoutValue: 18.00,
-        currency: "USD",
-        geos: ["WW"],
-        status: "requires_approval",
-        description: "Earn 18% rev-share of gross luxury cart purchases. Excellent seasonal checkout deals, custom promo codes enabled. Temporarily paused due to warehouse maintenance limits.",
-        rawUrl: "https://luxuryessentials.example.com/catalog",
-        trafficRestrictions: ["No Trademark bidding", "No discount scraping code directories"],
-        devices: "Desktop and Mobile responsive layouts supported",
-        caps: "Currently Paused",
-        previewUrl: "https://luxuryessentials.example.com",
-        landers: [], // No landing pages – validates conditional section hide rule
-        creatives: [] // No creatives / banners – validates conditional section hide rule
+  const [offers, setOffers] = useState<any[]>([]);
+  const [offersLoading, setOffersLoading] = useState(true);
+  const [offersError, setOffersError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadOffers = async () => {
+      setOffersLoading(true);
+      setOffersError(null);
+
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setOffers([]);
+        setOffersLoading(false);
+        return;
       }
-    ];
-  });
+
+      try {
+        const response = await fetch("http://localhost:3000/api/offers", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to load offers (${response.status})`);
+        }
+
+        const data = await response.json();
+        const normalizedOffers = Array.isArray(data)
+          ? data.map((offer: any) => ({
+              ...offer,
+              id: offer.id?.toString?.() ?? "",
+              payoutType: offer.payout_type ?? offer.payoutType ?? "CPA",
+              payoutValue: Number(offer.payout_amount ?? offer.payoutValue ?? 0),
+              geos: Array.isArray(offer.target_geos)
+                ? offer.target_geos
+                : Array.isArray(offer.geos)
+                ? offer.geos
+                : [],
+              devices: Array.isArray(offer.target_devices)
+                ? offer.target_devices.join(", ")
+                : offer.target_devices ?? offer.devices ?? "",
+              rawUrl: offer.landing_page_url ?? offer.rawUrl ?? "",
+              caps: offer.caps ?? "Live offer details available on request",
+              description: offer.description ?? "",
+              previewUrl: offer.preview_url ?? offer.previewUrl ?? "",
+              landers: offer.landers ?? [],
+              creatives: offer.creatives ?? [],
+              status:
+                offer.status === "ACTIVE"
+                  ? "open_access"
+                  : offer.status === "PAUSED" || offer.status === "DRAFT"
+                  ? "requires_approval"
+                  : offer.status?.toString?.().toLowerCase?.() ?? "unknown",
+            }))
+          : [];
+
+        setOffers(normalizedOffers);
+      } catch (error: any) {
+        console.error(error);
+        setOffersError(error.message || "Unable to load offers.");
+      } finally {
+        setOffersLoading(false);
+      }
+    };
+
+    loadOffers();
+  }, []);
 
   // Statefully manage publisher notifications
   const [notifications, setNotifications] = useState<PublisherNotification[]>(() => {
@@ -456,9 +403,9 @@ useEffect(() => {
           />
         );
       case "link-generator":
-        return <TrackingLinkView />;
+        return <TrackingLinkView offers={offers} />;
       case "postbacks":
-        return <PostbackSetupView />;
+        return <PostbackSetupView offers={offers} />;
       case "api-access":
         return <ApiAccessView />;
       case "reports":
@@ -469,6 +416,127 @@ useEffect(() => {
         return <InvoicesView />;
       case "profile":
         return <ProfileSettingsView />;
+      case "advertiser-dashboard":
+      case "advertiser-campaigns":
+      case "advertiser-tracking":
+      case "advertiser-billing":
+      case "advertiser-reports":
+        return (
+          <AdvertiserLayout
+            activeSection={activeScreen}
+            setActiveSection={setActiveScreen}
+            advertiserName="ApexTrack Advertiser"
+            onLogout={() => {
+              setIsLoggedIn(false);
+              setAuthScreen("login");
+            }}
+            onReturnToPublisher={() => setActiveScreen("dashboard")}
+          >
+            {activeScreen === "advertiser-dashboard" && <AdvertiserDashboardView />}
+            {activeScreen === "advertiser-campaigns" && <AdvertiserCampaignManagementView />}
+            {activeScreen === "advertiser-tracking" && <AdvertiserConversionTrackingView />}
+            {activeScreen === "advertiser-billing" && <AdvertiserBillingWalletView />}
+            {activeScreen === "advertiser-reports" && <AdvertiserPortalReportsView />}
+          </AdvertiserLayout>
+        );
+      case "manager-dashboard":
+      case "manager-publishers":
+      case "manager-offers-approval":
+      case "manager-communication":
+      case "manager-performance":
+        return (
+          <ManagerLayout
+            activeSection={activeScreen}
+            setActiveSection={setActiveScreen}
+            managerName="Affiliate Manager"
+            onLogout={() => {
+              setIsLoggedIn(false);
+              setAuthScreen("login");
+            }}
+            onReturnToPublisher={() => setActiveScreen("dashboard")}
+          >
+            {activeScreen === "manager-dashboard" && <ManagerDashboardView />}
+            {activeScreen === "manager-publishers" && <ManagerPublisherReviewView />}
+            {activeScreen === "manager-offers-approval" && <ManagerOfferApprovalView />}
+            {activeScreen === "manager-communication" && <ManagerCommunicationView />}
+            {activeScreen === "manager-performance" && <ManagerPerformanceView />}
+          </ManagerLayout>
+        );
+      case "admin-dashboard":
+      case "admin-publishers":
+      case "admin-offers":
+      case "admin-applications":
+      case "admin-affiliates-list":
+      case "admin-affiliates-profile":
+      case "admin-affiliates-pending":
+      case "admin-affiliates-active":
+      case "admin-affiliates-disabled":
+      case "admin-affiliates-create":
+      case "admin-affiliates-postbacks":
+      case "admin-affiliates-billing":
+      case "admin-postback-test":
+      case "admin-managers-list":
+      case "admin-managers-create":
+      case "admin-managers-assign":
+      case "admin-managers-performance":
+      case "admin-reports-overview":
+      case "admin-reports-daily":
+      case "admin-reports-click":
+      case "admin-reports-conversion":
+      case "admin-advertisers-list":
+      case "admin-advertisers-create":
+      case "admin-advertisers-billing":
+      case "admin-advertisers-reports":
+      case "admin-finance-revenue":
+      case "admin-finance-payouts":
+      case "admin-finance-invoices":
+      case "admin-system-settings":
+      case "admin-system-roles":
+      case "admin-system-audit":
+        return (
+          <AdminLayout
+            activeSection={activeScreen}
+            setActiveSection={setActiveScreen}
+            adminName="ApexTrack Admin"
+            onLogout={() => {
+              setIsLoggedIn(false);
+              setAuthScreen("login");
+            }}
+            onReturnToPublisher={() => setActiveScreen("dashboard")}
+          >
+            {activeScreen === "admin-dashboard" && <AdminDashboardUI />}
+            {activeScreen === "admin-publishers" && <AdminPublisherManagementView />}
+            {activeScreen === "admin-offers" && <AdminOfferManagementView />}
+            {activeScreen === "admin-applications" && <AdminApplicationReviewView />}
+            {activeScreen === "admin-affiliates-list" && <AffiliateListView onViewProfile={(affiliate) => { setSelectedAffiliate(affiliate); setActiveScreen("admin-affiliates-profile"); }} />}
+            {activeScreen === "admin-affiliates-profile" && selectedAffiliate && <AffiliateProfileView affiliate={selectedAffiliate} onBack={() => { setActiveScreen("admin-affiliates-list"); setSelectedAffiliate(null); }} />}
+            {activeScreen === "admin-affiliates-pending" && <AffiliateListView title="Pending Affiliates" subtitle="Affiliates awaiting approval or compliance review." onViewProfile={(affiliate) => { setSelectedAffiliate(affiliate); setActiveScreen("admin-affiliates-profile"); }} />}
+            {activeScreen === "admin-affiliates-active" && <AffiliateListView title="Active Affiliates" subtitle="Affiliates currently approved and generating traffic." onViewProfile={(affiliate) => { setSelectedAffiliate(affiliate); setActiveScreen("admin-affiliates-profile"); }} />}
+            {activeScreen === "admin-affiliates-disabled" && <AffiliateListView title="Disabled Affiliates" subtitle="Affiliates that are currently suspended or restricted." onViewProfile={(affiliate) => { setSelectedAffiliate(affiliate); setActiveScreen("admin-affiliates-profile"); }} />}
+            {activeScreen === "admin-affiliates-create" && <AffiliateCreateView />}
+            {activeScreen === "admin-affiliates-postbacks" && <AffiliatePostbacksView />}
+            {activeScreen === "admin-affiliates-billing" && <AffiliateBillingView />}
+            {activeScreen === "admin-postback-test" && <PostbackTestView />}
+            {activeScreen === "admin-managers-list" && <ManagerListView />}
+            {activeScreen === "admin-managers-create" && <ManagerCreateView />}
+            {activeScreen === "admin-managers-assign" && <ManagerAssignView />}
+            {activeScreen === "admin-managers-performance" && <AdminManagerPerformanceView />}
+            {activeScreen === "admin-reports-overview" && <AdminDashboardUI />}
+            {activeScreen === "admin-reports-daily" && <ReportsDailyView />}
+            {activeScreen === "admin-reports-click" && <ReportsClickView />}
+            {activeScreen === "admin-reports-conversion" && <ReportsConversionView />}
+            {activeScreen === "admin-advertisers-list" && <AdvertiserListView />}
+            {activeScreen === "admin-advertisers-create" && <AdvertiserCreateView />}
+            {activeScreen === "admin-advertisers-billing" && <AdvertiserBillingView />}
+            {activeScreen === "admin-advertisers-reports" && <AdvertiserReportsView />}
+            {activeScreen === "admin-finance-revenue" && <FinanceRevenueView />}
+            {activeScreen === "admin-finance-payouts" && <FinancePayoutsView />}
+            {activeScreen === "admin-finance-invoices" && <FinanceInvoicesView />}
+            {activeScreen === "admin-system-settings" && <SystemSettingsView />}
+            {activeScreen === "admin-system-roles" && <SystemSettingsView title="Roles & Permissions" description="Placeholder for roles, permissions and access control workflows." />}
+            {activeScreen === "admin-system-audit" && <SystemSettingsView title="Audit Logs" description="Placeholder for audit trail and administrative event logs." />}
+          </AdminLayout>
+        );
       default:
         return (
           <PublisherDashboardView 
@@ -480,6 +548,103 @@ useEffect(() => {
         );
     }
   };
+
+  // When a full admin/advertiser/manager panel is active, render it as a separate full-screen layout
+  // and avoid mounting the Publisher sidebar or publisher shell.
+  if (isLoggedIn && activeScreen.startsWith("admin-")) {
+    return (
+      <div className={`min-h-screen ${isDark ? "dark" : ""} theme-bg-page theme-text-main flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950 overflow-x-hidden relative`}>
+        <AdminLayout
+          activeSection={activeScreen}
+          setActiveSection={setActiveScreen}
+          adminName="ApexTrack Admin"
+          onLogout={() => {
+            setIsLoggedIn(false);
+            setAuthScreen("login");
+          }}
+          onReturnToPublisher={() => setActiveScreen("dashboard")}
+        >
+          {activeScreen === "admin-dashboard" && <AdminDashboardUI />}
+          {activeScreen === "admin-publishers" && <AdminPublisherManagementView />}
+          {activeScreen === "admin-offers" && <AdminOfferManagementView />}
+          {activeScreen === "admin-applications" && <AdminApplicationReviewView />}
+          {activeScreen === "admin-affiliates-list" && <AffiliateListView onViewProfile={(affiliate) => { setSelectedAffiliate(affiliate); setActiveScreen("admin-affiliate-profile"); }} />}
+          {activeScreen === "admin-affiliate-profile" && selectedAffiliate && <AffiliateProfileView affiliate={selectedAffiliate} onBack={() => { setActiveScreen("admin-affiliates-list"); setSelectedAffiliate(null); }} />}
+          {activeScreen === "admin-affiliates-pending" && <AffiliateListView title="Pending Affiliates" subtitle="Affiliates awaiting approval or compliance review." onViewProfile={(affiliate) => { setSelectedAffiliate(affiliate); setActiveScreen("admin-affiliate-profile"); }} />}
+          {activeScreen === "admin-affiliates-active" && <AffiliateListView title="Active Affiliates" subtitle="Affiliates currently approved and generating traffic." onViewProfile={(affiliate) => { setSelectedAffiliate(affiliate); setActiveScreen("admin-affiliate-profile"); }} />}
+          {activeScreen === "admin-affiliates-disabled" && <AffiliateListView title="Disabled Affiliates" subtitle="Affiliates that are currently suspended or restricted." onViewProfile={(affiliate) => { setSelectedAffiliate(affiliate); setActiveScreen("admin-affiliate-profile"); }} />}
+          {activeScreen === "admin-affiliates-create" && <AffiliateCreateView />}
+          {activeScreen === "admin-affiliates-postbacks" && <AffiliatePostbacksView />}
+          {activeScreen === "admin-affiliates-billing" && <AffiliateBillingView />}
+          {activeScreen === "admin-postback-test" && <PostbackTestView />}
+          {activeScreen === "admin-managers-list" && <ManagerListView />}
+          {activeScreen === "admin-managers-create" && <ManagerCreateView />}
+          {activeScreen === "admin-managers-assign" && <ManagerAssignView />}
+          {activeScreen === "admin-managers-performance" && <AdminManagerPerformanceView />}
+          {activeScreen === "admin-reports-overview" && <AdminDashboardUI />}
+          {activeScreen === "admin-reports-daily" && <ReportsDailyView />}
+          {activeScreen === "admin-reports-click" && <ReportsClickView />}
+          {activeScreen === "admin-reports-conversion" && <ReportsConversionView />}
+          {activeScreen === "admin-advertisers-list" && <AdvertiserListView />}
+          {activeScreen === "admin-advertisers-create" && <AdvertiserCreateView />}
+          {activeScreen === "admin-advertisers-billing" && <AdvertiserBillingView />}
+          {activeScreen === "admin-advertisers-reports" && <AdvertiserReportsView />}
+          {activeScreen === "admin-finance-revenue" && <FinanceRevenueView />}
+          {activeScreen === "admin-finance-payouts" && <FinancePayoutsView />}
+          {activeScreen === "admin-finance-invoices" && <FinanceInvoicesView />}
+          {activeScreen === "admin-system-settings" && <SystemSettingsView />}
+          {activeScreen === "admin-system-roles" && <SystemSettingsView title="Roles & Permissions" description="Placeholder for roles, permissions and access control workflows." />}
+          {activeScreen === "admin-system-audit" && <SystemSettingsView title="Audit Logs" description="Placeholder for audit trail and administrative event logs." />}
+        </AdminLayout>
+      </div>
+    );
+  }
+
+  if (isLoggedIn && activeScreen.startsWith("advertiser-")) {
+    return (
+      <div className={`min-h-screen ${isDark ? "dark" : ""} theme-bg-page theme-text-main flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950 overflow-x-hidden relative`}>
+        <AdvertiserLayout
+          activeSection={activeScreen}
+          setActiveSection={setActiveScreen}
+          advertiserName="ApexTrack Advertiser"
+          onLogout={() => {
+            setIsLoggedIn(false);
+            setAuthScreen("login");
+          }}
+          onReturnToPublisher={() => setActiveScreen("dashboard")}
+        >
+          {activeScreen === "advertiser-dashboard" && <AdvertiserDashboardView />}
+          {activeScreen === "advertiser-campaigns" && <AdvertiserCampaignManagementView />}
+          {activeScreen === "advertiser-tracking" && <AdvertiserConversionTrackingView />}
+          {activeScreen === "advertiser-billing" && <AdvertiserBillingWalletView />}
+          {activeScreen === "advertiser-reports" && <AdvertiserPortalReportsView />}
+        </AdvertiserLayout>
+      </div>
+    );
+  }
+
+  if (isLoggedIn && activeScreen.startsWith("manager-")) {
+    return (
+      <div className={`min-h-screen ${isDark ? "dark" : ""} theme-bg-page theme-text-main flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950 overflow-x-hidden relative`}>
+        <ManagerLayout
+          activeSection={activeScreen}
+          setActiveSection={setActiveScreen}
+          managerName="Affiliate Manager"
+          onLogout={() => {
+            setIsLoggedIn(false);
+            setAuthScreen("login");
+          }}
+          onReturnToPublisher={() => setActiveScreen("dashboard")}
+        >
+          {activeScreen === "manager-dashboard" && <ManagerDashboardView />}
+          {activeScreen === "manager-publishers" && <ManagerPublisherReviewView />}
+          {activeScreen === "manager-offers-approval" && <ManagerOfferApprovalView />}
+          {activeScreen === "manager-communication" && <ManagerCommunicationView />}
+          {activeScreen === "manager-performance" && <ManagerPerformanceView />}
+        </ManagerLayout>
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen ${isDark ? "dark" : ""} theme-bg-page theme-text-main flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950 overflow-x-hidden relative`}>
@@ -556,6 +721,30 @@ useEffect(() => {
                   {publisherName.charAt(0) || "P"}
                 </div>
 
+                {activeScreen !== "admin-dashboard" && activeScreen !== "admin-publishers" && activeScreen !== "admin-offers" && activeScreen !== "admin-applications" && activeScreen !== "advertiser-dashboard" && activeScreen !== "advertiser-campaigns" && activeScreen !== "advertiser-tracking" && activeScreen !== "advertiser-billing" && activeScreen !== "advertiser-reports" && activeScreen !== "manager-dashboard" && activeScreen !== "manager-publishers" && activeScreen !== "manager-offers-approval" && activeScreen !== "manager-communication" && activeScreen !== "manager-performance" && (
+                  <button
+                    onClick={() => setActiveScreen("admin-dashboard")}
+                    className="hidden md:inline-flex theme-bg-well border theme-border hover:bg-slate-100 dark:hover:bg-slate-900 theme-text-secondary hover:theme-text-main px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-wider transition font-medium select-none cursor-pointer duration-100"
+                  >
+                    Admin Panel
+                  </button>
+                )}
+                {activeScreen !== "admin-dashboard" && activeScreen !== "admin-publishers" && activeScreen !== "admin-offers" && activeScreen !== "admin-applications" && activeScreen !== "advertiser-dashboard" && activeScreen !== "advertiser-campaigns" && activeScreen !== "advertiser-tracking" && activeScreen !== "advertiser-billing" && activeScreen !== "advertiser-reports" && activeScreen !== "manager-dashboard" && activeScreen !== "manager-publishers" && activeScreen !== "manager-offers-approval" && activeScreen !== "manager-communication" && activeScreen !== "manager-performance" && (
+                  <button
+                    onClick={() => setActiveScreen("advertiser-dashboard")}
+                    className="hidden md:inline-flex theme-bg-well border theme-border hover:bg-slate-100 dark:hover:bg-slate-900 theme-text-secondary hover:theme-text-main px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-wider transition font-medium select-none cursor-pointer duration-100"
+                  >
+                    Advertiser Panel
+                  </button>
+                )}
+                {activeScreen !== "admin-dashboard" && activeScreen !== "admin-publishers" && activeScreen !== "admin-offers" && activeScreen !== "admin-applications" && activeScreen !== "advertiser-dashboard" && activeScreen !== "advertiser-campaigns" && activeScreen !== "advertiser-tracking" && activeScreen !== "advertiser-billing" && activeScreen !== "advertiser-reports" && activeScreen !== "manager-dashboard" && activeScreen !== "manager-publishers" && activeScreen !== "manager-offers-approval" && activeScreen !== "manager-communication" && activeScreen !== "manager-performance" && (
+                  <button
+                    onClick={() => setActiveScreen("manager-dashboard")}
+                    className="hidden md:inline-flex theme-bg-well border theme-border hover:bg-slate-100 dark:hover:bg-slate-900 theme-text-secondary hover:theme-text-main px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-wider transition font-medium select-none cursor-pointer duration-100"
+                  >
+                    Manager Panel
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     setIsLoggedIn(false);

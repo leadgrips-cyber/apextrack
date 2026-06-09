@@ -1,8 +1,11 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Radio, RefreshCw, Play, Code, CheckCircle, Info } from "lucide-react";
-import { DEMO_OFFERS } from "../data/publisherDemo";
 
-export function PostbackSetupView() {
+interface PostbackSetupViewProps {
+  offers: any[];
+}
+
+export function PostbackSetupView({ offers }: PostbackSetupViewProps) {
   const [globalPostbackUrl, setGlobalPostbackUrl] = useState(
     "https://tracker.com/postback?click_id={click_id}&payout={payout}"
   );
@@ -20,12 +23,21 @@ export function PostbackSetupView() {
   const TOKEN_LIST = ["{click_id}", "{offer_id}", "{payout}", "{sub1}", "{sub2}", "{sub3}", "{sub4}", "{sub5}"];
 
   // Offer override compact selector
-  const approvedOffers = useMemo(() => DEMO_OFFERS.filter((o) => o.status === "active"), []);
+  const approvedOffers = useMemo(
+    () => offers.filter((o) => o.status === "open_access" || o.status === "approved"),
+    [offers]
+  );
   const [selectedOfferId, setSelectedOfferId] = useState<string>("");
   const [offerOverrideUrl, setOfferOverrideUrl] = useState("");
   const [offerOverrides, setOfferOverrides] = useState<Record<string, string>>({});
 
   const selectedOffer = useMemo(() => approvedOffers.find((o) => o.id === selectedOfferId) || null, [approvedOffers, selectedOfferId]);
+
+  useEffect(() => {
+    if (!selectedOfferId && approvedOffers.length > 0) {
+      setSelectedOfferId(approvedOffers[0].id);
+    }
+  }, [approvedOffers, selectedOfferId]);
 
   // keep the offerOverrideUrl field synchronized with the selected offer
   useEffect(() => {

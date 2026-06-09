@@ -279,6 +279,77 @@ export function OfferMarketplaceView({
     id: ""
   });
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [marketplaceOffers, setMarketplaceOffers] = useState<any[]>([]);
+  const [isLoadingOffers, setIsLoadingOffers] = useState(true);
+  const [offersError, setOffersError] = useState<string | null>(null);
+
+  const normalizeApiOffer = (offer: any) => {
+    const status = offer.status || offer.offer_status || "";
+    const mappedStatus = status === "ACTIVE" ? "open_access" : status === "PAUSED" || status === "DRAFT" ? "requires_approval" : status.toString().toLowerCase();
+    return {
+      ...offer,
+      id: offer.id?.toString?.() ?? "",
+      name: offer.name ?? "Untitled Offer",
+      category: offer.category ?? "General",
+      status: mappedStatus,
+      payoutType: offer.payout_type ?? offer.payoutType ?? "CPA",
+      payoutValue: Number(offer.payout_amount ?? offer.payoutValue ?? 0),
+      currency: offer.currency ?? "USD",
+      geos: Array.isArray(offer.target_geos) ? offer.target_geos : Array.isArray(offer.geos) ? offer.geos : [],
+      devices: Array.isArray(offer.target_devices) ? offer.target_devices.join(", ") : offer.target_devices ?? offer.devices ?? "",
+      rawUrl: offer.landing_page_url ?? offer.rawUrl ?? "",
+      caps: offer.caps ?? "Live offer details available on request",
+      landing_page_url: offer.landing_page_url ?? offer.rawUrl ?? "",
+      requires_publisher_approval: offer.requires_publisher_approval ?? false,
+    };
+  };
+
+  useEffect(() => {
+    let active = true;
+    const fetchMarketplaceOffers = async () => {
+      setIsLoadingOffers(true);
+      setOffersError(null);
+
+      const token = localStorage.getItem("token");
+      if (!token) {
+        if (!active) return;
+        setOffersError("Missing authorization token.");
+        setIsLoadingOffers(false);
+        return;
+      }
+
+      try {
+        const response = await fetch("http://localhost:3000/api/offers", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to load offers: ${response.status}`);
+        }
+
+       const data = await response.json();
+
+const mappedOffers = Array.isArray(data.offers)
+  ? data.offers.map(normalizeApiOffer)
+  : [];
+        if (!active) return;
+        setMarketplaceOffers(mappedOffers);
+      } catch (error: any) {
+        if (!active) return;
+        setOffersError(error.message || "Unable to load offers.");
+      } finally {
+        if (!active) return;
+        setIsLoadingOffers(false);
+      }
+    };
+
+    fetchMarketplaceOffers();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Link generation custom states inside the Offer Detail layout
   const [pubSub1, setPubSub1] = useState("");
@@ -309,8 +380,8 @@ export function OfferMarketplaceView({
   // Find targeted offer if any
   const currentOffer = useMemo(() => {
     if (!selectedOfferId) return null;
-    return offers.find(o => o.id === selectedOfferId) || null;
-  }, [selectedOfferId, offers]);
+    return marketplaceOffers.find(o => o.id === selectedOfferId) || null;
+  }, [selectedOfferId, marketplaceOffers]);
 
   // Set default lander when changing currently inspected offer
   useEffect(() => {
@@ -324,19 +395,19 @@ export function OfferMarketplaceView({
 
   // Filters calculation
   const categories = useMemo(() => {
-    const unique = Array.from(new Set(offers.map((offer) => offer.category)));
+    const unique = Array.from(new Set(marketplaceOffers.map((offer) => offer.category)));
     return unique.sort((a, b) => a.localeCompare(b));
-  }, [offers]);
+  }, [marketplaceOffers]);
 
   const filteredOffers = useMemo(() => {
-    return offers.filter((offer) => {
+    return marketplaceOffers.filter((offer) => {
       const matchesCategory = !appliedFilters.category || offer.category === appliedFilters.category;
       const matchesCountry = !appliedFilters.country || offer.geos.includes(appliedFilters.country);
       const matchesName = !appliedFilters.name || offer.name.toLowerCase().includes(appliedFilters.name.toLowerCase());
       const matchesId = !appliedFilters.id || offer.id.toLowerCase().includes(appliedFilters.id.toLowerCase());
       return matchesCategory && matchesCountry && matchesName && matchesId;
     });
-  }, [appliedFilters, offers]);
+  }, [appliedFilters, marketplaceOffers]);
 
   const handleCopy = (text: string, keyName: string) => {
     navigator.clipboard.writeText(text);
@@ -1195,7 +1266,24 @@ export function OfferMarketplaceView({
       {/* RESULTS LIST TABLE (Everflow / Trackier classic high-density design) */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
         
-        {filteredOffers.length === 0 ? (
+        {isLoadingOffers ? (
+          <div className="text-center py-16 text-slate-500 space-y-2 bg-slate-50">
+            <Clock className="w-8 h-8 text-slate-700 mx-auto animate-spin" />
+            <p className="text-sm font-mono">Loading marketplace offers...</p>
+          </div>
+        ) : offersError ? (
+          <div className="text-center py-16 text-slate-500 space-y-2 bg-slate-50">
+            <AlertTriangle className="w-8 h-8 text-rose-500 mx-auto" />
+            <p className="text-sm font-mono">Unable to load offers.</p>
+            <p className="text-xs text-slate-400">{offersError}</p>
+          </div>
+        ) : marketplaceOffers.length === 0 ? (
+          <div className="text-center py-16 text-slate-500 space-y-2 bg-slate-50">
+            <HelpCircle className="w-8 h-8 text-slate-700 mx-auto" />
+            <p className="text-sm font-mono">No offers available.</p>
+            <p className="text-xs">The marketplace did not return any active campaigns.</p>
+          </div>
+        ) : filteredOffers.length === 0 ? (
           <div className="text-center py-12 text-slate-500 space-y-2 bg-slate-50">
             <HelpCircle className="w-8 h-8 text-slate-700 mx-auto" />
             <p className="text-sm font-mono">No offers found for selected filters.</p>

@@ -1,6 +1,5 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { CheckCircle, Globe, Link, ArrowUpRight, HelpCircle, AlertTriangle, ShieldCheck } from "lucide-react";
-import { DEMO_OFFERS, DemoOffer } from "../data/publisherDemo";
 
 interface MyOffersViewProps {
   setSelectedOfferId: (id: string | null) => void;
