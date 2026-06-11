@@ -101,3 +101,61 @@ export async function getRecentPostbacksData(limit: number = 20): Promise<analyt
 
   return analyticsRepository.getRecentPostbacks(limit);
 }
+
+export async function getRevenueByOfferData(params: {
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDir?: string;
+}): Promise<{
+  offers: analyticsRepository.RevenueByOffer[];
+  total: number;
+  page: number;
+  pageSize: number;
+}> {
+  const page = Math.max(1, Number(params.page) || 1);
+  const pageSize = Math.min(Math.max(1, Number(params.pageSize) || 25), 100);
+
+  const { rows, total } = await analyticsRepository.getRevenueByOffer({
+    startDate: params.startDate,
+    endDate: params.endDate,
+    page,
+    pageSize,
+    sortBy: params.sortBy,
+    sortDir: params.sortDir,
+  });
+
+  return { offers: rows, total, page, pageSize };
+}
+
+export async function getRevenueTransactionsData(params: {
+  startDate?: string;
+  endDate?: string;
+  status?: string;
+  offerId?: number;
+  publisherId?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<{
+  transactions: analyticsRepository.RevenueTransaction[];
+  total: number;
+  page: number;
+  pageSize: number;
+}> {
+  const page = Math.max(1, Number(params.page) || 1);
+  const pageSize = Math.min(Math.max(1, Number(params.pageSize) || 25), 100);
+
+  const { rows, total } = await analyticsRepository.getRevenueTransactions({
+    startDate: params.startDate,
+    endDate: params.endDate,
+    status: params.status,
+    offerId: params.offerId,
+    publisherId: params.publisherId,
+    page,
+    pageSize,
+  });
+
+  return { transactions: rows, total, page, pageSize };
+}

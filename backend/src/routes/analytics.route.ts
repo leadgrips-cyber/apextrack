@@ -8,6 +8,8 @@ import {
   handleGetTopOffers,
   handleGetRecentConversions,
   handleGetRecentPostbacks,
+  handleGetRevenueByOffer,
+  handleGetRevenueTransactions,
 } from "../controllers/analytics.controller.js";
 
 const router = Router();
@@ -20,5 +22,8 @@ router.get('/dashboard/top-publishers', handleGetTopPublishers);
 router.get('/dashboard/top-offers', handleGetTopOffers);
 router.get('/dashboard/recent-conversions', handleGetRecentConversions);
 router.get('/dashboard/recent-postbacks', handleGetRecentPostbacks);
+
+router.get('/finance/revenue-by-offer', handleGetRevenueByOffer);
+router.get('/finance/transactions', handleGetRevenueTransactions);
 
 export default router;

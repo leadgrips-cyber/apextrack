@@ -7,6 +7,8 @@ import {
   getTopOffersData,
   getRecentConversionsData,
   getRecentPostbacksData,
+  getRevenueByOfferData,
+  getRevenueTransactionsData,
 } from "../services/analytics.service.js";
 
 function parsePositiveNumber(value: unknown, fallback: number): number {
@@ -105,6 +107,39 @@ export async function handleGetRecentPostbacks(req: AuthRequest, res: Response, 
 
     const postbacks = await getRecentPostbacksData(limit);
     res.json({ postbacks, count: postbacks.length });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function handleGetRevenueByOffer(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const page     = parsePositiveNumber(req.query.page, 1);
+    const pageSize = parsePositiveNumber(req.query.page_size, 25);
+    const sortBy   = typeof req.query.sort_by  === 'string' ? req.query.sort_by  : undefined;
+    const sortDir  = typeof req.query.sort_dir === 'string' ? req.query.sort_dir : undefined;
+    const startDate = parseISODate(req.query.start_date);
+    const endDate   = parseISODate(req.query.end_date);
+
+    const result = await getRevenueByOfferData({ page, pageSize, sortBy, sortDir, startDate, endDate });
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function handleGetRevenueTransactions(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const page      = parsePositiveNumber(req.query.page, 1);
+    const pageSize  = parsePositiveNumber(req.query.page_size, 25);
+    const startDate = parseISODate(req.query.start_date);
+    const endDate   = parseISODate(req.query.end_date);
+    const status    = typeof req.query.status       === 'string' && req.query.status       ? req.query.status       : undefined;
+    const publisherId = typeof req.query.publisher_id === 'string' && req.query.publisher_id ? req.query.publisher_id : undefined;
+    const offerId   = req.query.offer_id ? Number(req.query.offer_id) : undefined;
+
+    const result = await getRevenueTransactionsData({ page, pageSize, startDate, endDate, status, offerId, publisherId });
+    res.json(result);
   } catch (error) {
     next(error);
   }

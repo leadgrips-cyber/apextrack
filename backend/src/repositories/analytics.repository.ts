@@ -210,6 +210,148 @@ export async function getRecentConversions(limit: number = 20): Promise<RecentCo
   return result.rows;
 }
 
+export interface RevenueByOffer {
+  offer_id: number;
+  offer_name: string;
+  slug: string;
+  category: string;
+  total_clicks: number;
+  total_conversions: number;
+  total_revenue: string;
+  total_payout: string;
+  profit: string;
+}
+
+export interface RevenueTransaction {
+  id: string;
+  click_id: string;
+  offer_id: number;
+  offer_name: string;
+  publisher_id: string;
+  publisher_email: string;
+  conversion_status: string;
+  payout_amount: string;
+  revenue_amount: string;
+  profit: string;
+  event_timestamp: string;
+  created_at: string;
+}
+
+const OFFER_SORT_EXPR: Record<string, string> = {
+  total_revenue:    'COALESCE(SUM(c.revenue_amount), 0)',
+  total_payout:     'COALESCE(SUM(c.payout_amount), 0)',
+  profit:           '(COALESCE(SUM(c.revenue_amount), 0) - COALESCE(SUM(c.payout_amount), 0))',
+  total_conversions: 'COUNT(c.id)',
+  offer_name:       'o.name',
+};
+
+export async function getRevenueByOffer(params: {
+  startDate?: string;
+  endDate?: string;
+  page: number;
+  pageSize: number;
+  sortBy?: string;
+  sortDir?: string;
+}): Promise<{ rows: RevenueByOffer[]; total: number }> {
+  const sortExpr = OFFER_SORT_EXPR[params.sortBy ?? ''] ?? OFFER_SORT_EXPR.total_revenue;
+  const dir = params.sortDir?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+  const p: unknown[] = [];
+
+  let dateJoinFilter = '';
+  if (params.startDate && params.endDate) {
+    p.push(params.startDate, params.endDate);
+    dateJoinFilter = `AND c.event_timestamp >= $1 AND c.event_timestamp <= $2`;
+  }
+
+  p.push(params.pageSize, (params.page - 1) * params.pageSize);
+  const limitN = p.length - 1;
+  const offsetN = p.length;
+
+  const [rowsResult, countResult] = await Promise.all([
+    query<RevenueByOffer>(
+      `SELECT
+         o.id AS offer_id,
+         o.name AS offer_name,
+         o.slug,
+         o.category,
+         COALESCE(cs.total_clicks, 0) AS total_clicks,
+         COUNT(c.id) AS total_conversions,
+         COALESCE(SUM(c.revenue_amount), 0)::TEXT AS total_revenue,
+         COALESCE(SUM(c.payout_amount), 0)::TEXT AS total_payout,
+         (COALESCE(SUM(c.revenue_amount), 0) - COALESCE(SUM(c.payout_amount), 0))::TEXT AS profit
+       FROM offers o
+       LEFT JOIN (
+         SELECT offer_id, COUNT(*) AS total_clicks FROM clicks GROUP BY offer_id
+       ) cs ON cs.offer_id = o.id
+       LEFT JOIN conversions c ON c.offer_id = o.id ${dateJoinFilter}
+       GROUP BY o.id, o.name, o.slug, o.category, cs.total_clicks
+       ORDER BY ${sortExpr} ${dir} NULLS LAST
+       LIMIT $${limitN} OFFSET $${offsetN}`,
+      p
+    ),
+    query<{ count: string }>('SELECT COUNT(*) FROM offers', []),
+  ]);
+
+  return { rows: rowsResult.rows, total: Number(countResult.rows[0]?.count ?? 0) };
+}
+
+export async function getRevenueTransactions(params: {
+  startDate?: string;
+  endDate?: string;
+  status?: string;
+  offerId?: number;
+  publisherId?: string;
+  page: number;
+  pageSize: number;
+}): Promise<{ rows: RevenueTransaction[]; total: number }> {
+  const clauses: string[] = [];
+  const p: unknown[] = [];
+
+  if (params.startDate)   { p.push(params.startDate);               clauses.push(`c.event_timestamp >= $${p.length}`); }
+  if (params.endDate)     { p.push(params.endDate);                 clauses.push(`c.event_timestamp <= $${p.length}`); }
+  if (params.status)      { p.push(params.status.toUpperCase());    clauses.push(`c.conversion_status = $${p.length}`); }
+  if (params.offerId)     { p.push(params.offerId);                 clauses.push(`c.offer_id = $${p.length}`); }
+  if (params.publisherId) { p.push(params.publisherId);             clauses.push(`c.publisher_id = $${p.length}`); }
+
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  const countP = [...p];
+
+  p.push(params.pageSize, (params.page - 1) * params.pageSize);
+  const limitN = p.length - 1;
+  const offsetN = p.length;
+
+  const [rowsResult, countResult] = await Promise.all([
+    query<RevenueTransaction>(
+      `SELECT
+         c.id,
+         c.click_id,
+         c.offer_id,
+         o.name AS offer_name,
+         c.publisher_id,
+         p.email AS publisher_email,
+         c.conversion_status,
+         c.payout_amount::TEXT,
+         c.revenue_amount::TEXT,
+         (c.revenue_amount - c.payout_amount)::TEXT AS profit,
+         c.event_timestamp,
+         c.created_at
+       FROM conversions c
+       JOIN offers o ON c.offer_id = o.id
+       JOIN publishers p ON c.publisher_id = p.id
+       ${where}
+       ORDER BY c.created_at DESC
+       LIMIT $${limitN} OFFSET $${offsetN}`,
+      p
+    ),
+    query<{ count: string }>(
+      `SELECT COUNT(*) FROM conversions c ${where}`,
+      countP
+    ),
+  ]);
+
+  return { rows: rowsResult.rows, total: Number(countResult.rows[0]?.count ?? 0) };
+}
+
 export async function getRecentPostbacks(limit: number = 20): Promise<RecentPostback[]> {
   const result = await query<RecentPostback>(
     `SELECT
