@@ -69,10 +69,15 @@ export interface RecentPostback {
 }
 
 export async function getDashboardSummary(startDate?: string, endDate?: string): Promise<DashboardSummary> {
-  const dateFilter = startDate && endDate 
-    ? `AND c.event_timestamp >= $1 AND c.event_timestamp <= $2`
-    : '';
   const dateParams = startDate && endDate ? [startDate, endDate] : [];
+  // mainWhere: uses the `c` alias present in the outer FROM conversions c
+  const mainWhere = startDate && endDate
+    ? `WHERE c.event_timestamp >= $1 AND c.event_timestamp <= $2`
+    : '';
+  // subWhere: used inside correlated subqueries that have no table alias
+  const subWhere = startDate && endDate
+    ? `WHERE event_timestamp >= $1 AND event_timestamp <= $2`
+    : '';
 
   const result = await query<DashboardSummary>(
     `SELECT
@@ -81,12 +86,12 @@ export async function getDashboardSummary(startDate?: string, endDate?: string):
        (SELECT COUNT(*) FROM offers) AS total_offers,
        (SELECT COUNT(*) FROM offers WHERE status = 'ACTIVE') AS active_offers,
        (SELECT COUNT(*) FROM clicks) AS total_clicks,
-       (SELECT COUNT(*) FROM conversions ${dateFilter.replace('c.', 'event_timestamp')}) AS total_conversions,
+       (SELECT COUNT(*) FROM conversions ${subWhere}) AS total_conversions,
        COALESCE(SUM(c.revenue_amount)::TEXT, '0') AS total_revenue,
        COALESCE(SUM(c.payout_amount)::TEXT, '0') AS total_payout,
        COALESCE((SUM(c.revenue_amount) - SUM(c.payout_amount))::TEXT, '0') AS profit
      FROM conversions c
-     ${dateFilter}`,
+     ${mainWhere}`,
     dateParams
   );
 

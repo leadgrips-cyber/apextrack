@@ -11,6 +11,12 @@ import {
   handleGetRevenueByOffer,
   handleGetRevenueTransactions,
 } from "../controllers/analytics.controller.js";
+import {
+  handleGetPayoutsSummary,
+  handleGetPublishersWithBalances,
+  handleGetWalletTransactions,
+  handleProcessManualPayout,
+} from "../controllers/payouts.controller.js";
 
 const router = Router();
 
@@ -25,5 +31,10 @@ router.get('/dashboard/recent-postbacks', handleGetRecentPostbacks);
 
 router.get('/finance/revenue-by-offer', handleGetRevenueByOffer);
 router.get('/finance/transactions', handleGetRevenueTransactions);
+
+router.get('/finance/payouts/summary', handleGetPayoutsSummary);
+router.get('/finance/payouts/publishers', handleGetPublishersWithBalances);
+router.get('/finance/payouts/transactions', handleGetWalletTransactions);
+router.post('/finance/payouts/process', handleProcessManualPayout);
 
 export default router;
