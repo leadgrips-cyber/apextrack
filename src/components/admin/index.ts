@@ -1,6 +1,5 @@
 export { AdminLayout } from "./AdminLayout";
 export { AdminDashboardView } from "./AdminDashboardView";
-export { AdminPublisherManagementView } from "./AdminPublisherManagementView";
 export { AdminOfferManagementView } from "./AdminOfferManagementView";
 export { AdminApplicationReviewView } from "./AdminApplicationReviewView";
 
@@ -56,3 +55,4 @@ export { FinanceTransactionsView } from "./FinanceTransactionsView";
 
 // System
 export { SystemSettingsView } from "./SystemSettingsView";
+export { AdminNetworkSettingsView } from "./AdminNetworkSettingsView";

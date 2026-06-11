@@ -1,4 +1,5 @@
 import * as trackingRepository from "../repositories/tracking.repository.js";
+import * as offerRepository from "../repositories/offer.repository.js";
 import { TrackingLinkCreatePayload, TrackingLinkRecord } from "../types/tracking.js";
 
 function buildTrackingUrl(publisherId: string, payload: TrackingLinkCreatePayload) {
@@ -13,17 +14,27 @@ function buildTrackingUrl(publisherId: string, payload: TrackingLinkCreatePayloa
   if (payload.sub4) params.append('sub4', payload.sub4);
   if (payload.sub5) params.append('sub5', payload.sub5);
 
-  return `/click?${params.toString()}`;
+  return `/api/click?${params.toString()}`;
 }
 
 export async function generateTrackingLink(publisherId: string, payload: TrackingLinkCreatePayload): Promise<TrackingLinkRecord> {
-  const approved = await trackingRepository.findApprovedOfferApplication(payload.offer_id, publisherId);
-  if (!approved) {
-    throw new Error('Offer application must be approved to generate tracking links');
+  const offer = await offerRepository.findOfferById(payload.offer_id);
+  if (!offer) {
+    throw new Error('Offer not found');
+  }
+  if (offer.status !== 'ACTIVE') {
+    throw new Error('Offer is not active');
+  }
+
+  if (offer.requires_publisher_approval) {
+    const approved = await trackingRepository.findApprovedOfferApplication(payload.offer_id, publisherId);
+    if (!approved) {
+      throw new Error('Offer application must be approved to generate tracking links');
+    }
   }
 
   const trackingUrl = buildTrackingUrl(publisherId, payload);
-  return trackingRepository.insertTrackingLink(publisherId, payload, trackingUrl);
+  return trackingRepository.upsertTrackingLink(publisherId, payload, trackingUrl);
 }
 
 export async function listTrackingLinks(publisherId: string): Promise<TrackingLinkRecord[]> {

@@ -26,12 +26,4 @@ router.patch('/:id/pause', authorizeRoles('admin'), handlePauseOffer);
 router.patch('/:id/activate', authorizeRoles('admin'), handleActivateOffer);
 router.delete('/:id', authorizeRoles('admin'), handleDeleteOffer);
 
-router.get('/', handleListOffers);
-router.get('/:id', handleGetOfferDetails);
-router.post('/', handleCreateOffer);
-router.put('/:id', handleUpdateOffer);
-router.patch('/:id/pause', handlePauseOffer);
-router.patch('/:id/activate', handleActivateOffer);
-router.delete('/:id', handleDeleteOffer);
-
 export default router;

@@ -8,6 +8,8 @@ import trackingRouter from "./tracking.route.js";
 import publisherPostbackRouter from "./publisher-postback.route.js";
 import publisherRouter from "./publisher.route.js";
 import analyticsRouter from "./analytics.route.js";
+import advertiserRouter from "./advertiser.route.js";
+import networkSettingsRouter from "./network-settings.route.js";
 
 const router = Router();
 
@@ -20,5 +22,7 @@ router.use('/tracking', trackingRouter);
 router.use('/publisher-postbacks', publisherPostbackRouter);
 router.use('/publishers', publisherRouter);
 router.use('/analytics', analyticsRouter);
+router.use('/advertisers', advertiserRouter);
+router.use('/network-settings', networkSettingsRouter);
 
 export default router;

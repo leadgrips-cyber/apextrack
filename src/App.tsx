@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useBranding } from "./contexts/BrandingContext";
+import { AdminNetworkSettingsView } from "./components/admin";
 import * as authApi from "./services/auth";
 import { PublisherAuth } from "./components/PublisherAuth";
 import { PublisherSidebar } from "./components/PublisherSidebar";
@@ -18,7 +20,6 @@ import { AnnouncementsView, NetworkAnnouncement } from "./components/Announcemen
 import {
   AdminLayout,
   AdminDashboardView as AdminDashboardUI,
-  AdminPublisherManagementView,
   AdminOfferManagementView,
   AdminApplicationReviewView,
   AffiliateListView,
@@ -77,10 +78,13 @@ import {
 } from "lucide-react";
 
 export default function App() {
+  const branding = useBranding();
+
   // Authentication & session simulation states
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState<string>("");
   const [authScreen, setAuthScreen] = useState<"login" | "register" | "forgot" | "verify">("login");
-  
+
   // Navigation tabs of the authorized publisher portal
   // Maps to: dashboard, marketplace, my-offers, link-generator, postbacks, api-access, reports, wallet, invoices, profile, notifications, announcements
   const [activeScreen, setActiveScreen] = useState("dashboard");
@@ -94,8 +98,9 @@ export default function App() {
 useEffect(() => {
   const loadUser = async () => {
     const token = localStorage.getItem("token");
+    const adminToken = localStorage.getItem("admin_token");
 
-    if (!token) {
+    if (!token && !adminToken) {
       setIsLoggedIn(false);
       return;
     }
@@ -104,7 +109,11 @@ useEffect(() => {
       const user = await authApi.getCurrentUser();
 
       setPublisherName(user.fullName || user.companyName || "Publisher");
+      setUserRole(user.role);
       setIsLoggedIn(true);
+      if (user.role === "admin") {
+        setActiveScreen("admin-dashboard");
+      }
     } catch (error) {
       console.error(error);
       setIsLoggedIn(false);
@@ -142,8 +151,8 @@ useEffect(() => {
         }
 
         const data = await response.json();
-        const normalizedOffers = Array.isArray(data)
-          ? data.map((offer: any) => ({
+        const normalizedOffers = Array.isArray(data.offers)
+          ? data.offers.map((offer: any) => ({
               ...offer,
               id: offer.id?.toString?.() ?? "",
               payoutType: offer.payout_type ?? offer.payoutType ?? "CPA",
@@ -163,9 +172,9 @@ useEffect(() => {
               landers: offer.landers ?? [],
               creatives: offer.creatives ?? [],
               status:
-                offer.status === "ACTIVE"
+                offer.status === "ACTIVE" && !offer.requires_publisher_approval
                   ? "open_access"
-                  : offer.status === "PAUSED" || offer.status === "DRAFT"
+                  : offer.status === "ACTIVE" && offer.requires_publisher_approval
                   ? "requires_approval"
                   : offer.status?.toString?.().toLowerCase?.() ?? "unknown",
             }))
@@ -248,7 +257,7 @@ useEffect(() => {
       {
         id: "an-1",
         category: "Network News",
-        title: "ApexTrack Launches Click Attribution Engine v4.1",
+        title: "Platform Upgrade: Click Attribution Engine v4.1 Deployed",
         content: "We have fully upgraded our redirection proxy engine, achieving record conversion postback routing response times under 12 milliseconds across EU and US nodes. This prevents click loss during scaling windows.",
         author: "Sophia Kovalski (AM Representative)",
         timestamp: "2026-06-06 11:22",
@@ -462,81 +471,6 @@ useEffect(() => {
             {activeScreen === "manager-performance" && <ManagerPerformanceView />}
           </ManagerLayout>
         );
-      case "admin-dashboard":
-      case "admin-publishers":
-      case "admin-offers":
-      case "admin-applications":
-      case "admin-affiliates-list":
-      case "admin-affiliates-profile":
-      case "admin-affiliates-pending":
-      case "admin-affiliates-active":
-      case "admin-affiliates-disabled":
-      case "admin-affiliates-create":
-      case "admin-affiliates-postbacks":
-      case "admin-affiliates-billing":
-      case "admin-postback-test":
-      case "admin-managers-list":
-      case "admin-managers-create":
-      case "admin-managers-assign":
-      case "admin-managers-performance":
-      case "admin-reports-overview":
-      case "admin-reports-daily":
-      case "admin-reports-click":
-      case "admin-reports-conversion":
-      case "admin-advertisers-list":
-      case "admin-advertisers-create":
-      case "admin-advertisers-billing":
-      case "admin-advertisers-reports":
-      case "admin-finance-revenue":
-      case "admin-finance-payouts":
-      case "admin-finance-invoices":
-      case "admin-system-settings":
-      case "admin-system-roles":
-      case "admin-system-audit":
-        return (
-          <AdminLayout
-            activeSection={activeScreen}
-            setActiveSection={setActiveScreen}
-            adminName="ApexTrack Admin"
-            onLogout={() => {
-              setIsLoggedIn(false);
-              setAuthScreen("login");
-            }}
-            onReturnToPublisher={() => setActiveScreen("dashboard")}
-          >
-            {activeScreen === "admin-dashboard" && <AdminDashboardUI />}
-            {activeScreen === "admin-publishers" && <AdminPublisherManagementView />}
-            {activeScreen === "admin-offers" && <AdminOfferManagementView />}
-            {activeScreen === "admin-applications" && <AdminApplicationReviewView />}
-            {activeScreen === "admin-affiliates-list" && <AffiliateListView onViewProfile={(affiliate) => { setSelectedAffiliate(affiliate); setActiveScreen("admin-affiliates-profile"); }} />}
-            {activeScreen === "admin-affiliates-profile" && selectedAffiliate && <AffiliateProfileView affiliate={selectedAffiliate} onBack={() => { setActiveScreen("admin-affiliates-list"); setSelectedAffiliate(null); }} />}
-            {activeScreen === "admin-affiliates-pending" && <AffiliateListView title="Pending Affiliates" subtitle="Affiliates awaiting approval or compliance review." onViewProfile={(affiliate) => { setSelectedAffiliate(affiliate); setActiveScreen("admin-affiliates-profile"); }} />}
-            {activeScreen === "admin-affiliates-active" && <AffiliateListView title="Active Affiliates" subtitle="Affiliates currently approved and generating traffic." onViewProfile={(affiliate) => { setSelectedAffiliate(affiliate); setActiveScreen("admin-affiliates-profile"); }} />}
-            {activeScreen === "admin-affiliates-disabled" && <AffiliateListView title="Disabled Affiliates" subtitle="Affiliates that are currently suspended or restricted." onViewProfile={(affiliate) => { setSelectedAffiliate(affiliate); setActiveScreen("admin-affiliates-profile"); }} />}
-            {activeScreen === "admin-affiliates-create" && <AffiliateCreateView />}
-            {activeScreen === "admin-affiliates-postbacks" && <AffiliatePostbacksView />}
-            {activeScreen === "admin-affiliates-billing" && <AffiliateBillingView />}
-            {activeScreen === "admin-postback-test" && <PostbackTestView />}
-            {activeScreen === "admin-managers-list" && <ManagerListView />}
-            {activeScreen === "admin-managers-create" && <ManagerCreateView />}
-            {activeScreen === "admin-managers-assign" && <ManagerAssignView />}
-            {activeScreen === "admin-managers-performance" && <AdminManagerPerformanceView />}
-            {activeScreen === "admin-reports-overview" && <AdminDashboardUI />}
-            {activeScreen === "admin-reports-daily" && <ReportsDailyView />}
-            {activeScreen === "admin-reports-click" && <ReportsClickView />}
-            {activeScreen === "admin-reports-conversion" && <ReportsConversionView />}
-            {activeScreen === "admin-advertisers-list" && <AdvertiserListView />}
-            {activeScreen === "admin-advertisers-create" && <AdvertiserCreateView />}
-            {activeScreen === "admin-advertisers-billing" && <AdvertiserBillingView />}
-            {activeScreen === "admin-advertisers-reports" && <AdvertiserReportsView />}
-            {activeScreen === "admin-finance-revenue" && <FinanceRevenueView />}
-            {activeScreen === "admin-finance-payouts" && <FinancePayoutsView />}
-            {activeScreen === "admin-finance-invoices" && <FinanceInvoicesView />}
-            {activeScreen === "admin-system-settings" && <SystemSettingsView />}
-            {activeScreen === "admin-system-roles" && <SystemSettingsView title="Roles & Permissions" description="Placeholder for roles, permissions and access control workflows." />}
-            {activeScreen === "admin-system-audit" && <SystemSettingsView title="Audit Logs" description="Placeholder for audit trail and administrative event logs." />}
-          </AdminLayout>
-        );
       default:
         return (
           <PublisherDashboardView 
@@ -557,23 +491,23 @@ useEffect(() => {
         <AdminLayout
           activeSection={activeScreen}
           setActiveSection={setActiveScreen}
-          adminName="ApexTrack Admin"
+          adminName={publisherName}
           onLogout={() => {
             setIsLoggedIn(false);
             setAuthScreen("login");
           }}
-          onReturnToPublisher={() => setActiveScreen("dashboard")}
+          onCreateOffer={() => setActiveScreen("admin-offer-create")}
         >
           {activeScreen === "admin-dashboard" && <AdminDashboardUI />}
-          {activeScreen === "admin-publishers" && <AdminPublisherManagementView />}
           {activeScreen === "admin-offers" && <AdminOfferManagementView />}
+          {activeScreen === "admin-offer-create" && <AdminOfferManagementView openCreateOnMount />}
           {activeScreen === "admin-applications" && <AdminApplicationReviewView />}
-          {activeScreen === "admin-affiliates-list" && <AffiliateListView onViewProfile={(affiliate) => { setSelectedAffiliate(affiliate); setActiveScreen("admin-affiliate-profile"); }} />}
+          {activeScreen === "admin-affiliates-list" && <AffiliateListView onViewProfile={(affiliate) => { setSelectedAffiliate(affiliate); setActiveScreen("admin-affiliate-profile"); }} onCreateAffiliate={() => { console.log("NAVIGATE_TO_ADMIN_AFFILIATES_CREATE"); setActiveScreen("admin-affiliates-create"); }} />}
           {activeScreen === "admin-affiliate-profile" && selectedAffiliate && <AffiliateProfileView affiliate={selectedAffiliate} onBack={() => { setActiveScreen("admin-affiliates-list"); setSelectedAffiliate(null); }} />}
-          {activeScreen === "admin-affiliates-pending" && <AffiliateListView title="Pending Affiliates" subtitle="Affiliates awaiting approval or compliance review." onViewProfile={(affiliate) => { setSelectedAffiliate(affiliate); setActiveScreen("admin-affiliate-profile"); }} />}
-          {activeScreen === "admin-affiliates-active" && <AffiliateListView title="Active Affiliates" subtitle="Affiliates currently approved and generating traffic." onViewProfile={(affiliate) => { setSelectedAffiliate(affiliate); setActiveScreen("admin-affiliate-profile"); }} />}
-          {activeScreen === "admin-affiliates-disabled" && <AffiliateListView title="Disabled Affiliates" subtitle="Affiliates that are currently suspended or restricted." onViewProfile={(affiliate) => { setSelectedAffiliate(affiliate); setActiveScreen("admin-affiliate-profile"); }} />}
-          {activeScreen === "admin-affiliates-create" && <AffiliateCreateView />}
+          {activeScreen === "admin-affiliates-pending" && <AffiliateListView title="Pending Affiliates" subtitle="Affiliates awaiting approval or compliance review." initialStatusFilter="Pending" onViewProfile={(affiliate) => { setSelectedAffiliate(affiliate); setActiveScreen("admin-affiliate-profile"); }} onCreateAffiliate={() => setActiveScreen("admin-affiliates-create")} />}
+          {activeScreen === "admin-affiliates-active" && <AffiliateListView title="Active Affiliates" subtitle="Affiliates currently approved and generating traffic." initialStatusFilter="Active" onViewProfile={(affiliate) => { setSelectedAffiliate(affiliate); setActiveScreen("admin-affiliate-profile"); }} onCreateAffiliate={() => setActiveScreen("admin-affiliates-create")} />}
+          {activeScreen === "admin-affiliates-disabled" && <AffiliateListView title="Disabled Affiliates" subtitle="Affiliates that are currently suspended or restricted." initialStatusFilter="Disabled" onViewProfile={(affiliate) => { setSelectedAffiliate(affiliate); setActiveScreen("admin-affiliate-profile"); }} onCreateAffiliate={() => setActiveScreen("admin-affiliates-create")} />}
+          {activeScreen === "admin-affiliates-create" && <AffiliateCreateView onSuccess={() => setActiveScreen("admin-affiliates-list")} />}
           {activeScreen === "admin-affiliates-postbacks" && <AffiliatePostbacksView />}
           {activeScreen === "admin-affiliates-billing" && <AffiliateBillingView />}
           {activeScreen === "admin-postback-test" && <PostbackTestView />}
@@ -585,14 +519,15 @@ useEffect(() => {
           {activeScreen === "admin-reports-daily" && <ReportsDailyView />}
           {activeScreen === "admin-reports-click" && <ReportsClickView />}
           {activeScreen === "admin-reports-conversion" && <ReportsConversionView />}
-          {activeScreen === "admin-advertisers-list" && <AdvertiserListView />}
-          {activeScreen === "admin-advertisers-create" && <AdvertiserCreateView />}
+          {activeScreen === "admin-advertisers-list" && <AdvertiserListView onCreateNew={() => setActiveScreen("admin-advertisers-create")} />}
+          {activeScreen === "admin-advertisers-create" && <AdvertiserCreateView onSuccess={() => setActiveScreen("admin-advertisers-list")} onCancel={() => setActiveScreen("admin-advertisers-list")} />}
           {activeScreen === "admin-advertisers-billing" && <AdvertiserBillingView />}
           {activeScreen === "admin-advertisers-reports" && <AdvertiserReportsView />}
           {activeScreen === "admin-finance-revenue" && <FinanceRevenueView />}
           {activeScreen === "admin-finance-payouts" && <FinancePayoutsView />}
           {activeScreen === "admin-finance-invoices" && <FinanceInvoicesView />}
           {activeScreen === "admin-system-settings" && <SystemSettingsView />}
+          {activeScreen === "admin-network-settings" && <AdminNetworkSettingsView />}
           {activeScreen === "admin-system-roles" && <SystemSettingsView title="Roles & Permissions" description="Placeholder for roles, permissions and access control workflows." />}
           {activeScreen === "admin-system-audit" && <SystemSettingsView title="Audit Logs" description="Placeholder for audit trail and administrative event logs." />}
         </AdminLayout>
@@ -611,7 +546,6 @@ useEffect(() => {
             setIsLoggedIn(false);
             setAuthScreen("login");
           }}
-          onReturnToPublisher={() => setActiveScreen("dashboard")}
         >
           {activeScreen === "advertiser-dashboard" && <AdvertiserDashboardView />}
           {activeScreen === "advertiser-campaigns" && <AdvertiserCampaignManagementView />}
@@ -634,7 +568,6 @@ useEffect(() => {
             setIsLoggedIn(false);
             setAuthScreen("login");
           }}
-          onReturnToPublisher={() => setActiveScreen("dashboard")}
         >
           {activeScreen === "manager-dashboard" && <ManagerDashboardView />}
           {activeScreen === "manager-publishers" && <ManagerPublisherReviewView />}
@@ -692,7 +625,7 @@ useEffect(() => {
                 <div className="flex items-center gap-2 font-mono">
                   <span className="text-xs uppercase tracking-widest text-cyan-600 dark:text-cyan-400 font-semibold flex items-center gap-1">
                     <Sparkles className="w-3.5 h-3.5 animate-pulse text-cyan-500 dark:text-cyan-400" />
-                    APEXTRACK PARTNER NETWORK
+                    {branding.networkName.toUpperCase()} PARTNER NETWORK
                   </span>
                   <span className="hidden md:inline-block theme-bg-well text-[9px] text-emerald-600 dark:text-emerald-400 border theme-border px-2 py-0.5 rounded font-bold">
                     Ledger Secure Engine v4.1
@@ -721,30 +654,6 @@ useEffect(() => {
                   {publisherName.charAt(0) || "P"}
                 </div>
 
-                {activeScreen !== "admin-dashboard" && activeScreen !== "admin-publishers" && activeScreen !== "admin-offers" && activeScreen !== "admin-applications" && activeScreen !== "advertiser-dashboard" && activeScreen !== "advertiser-campaigns" && activeScreen !== "advertiser-tracking" && activeScreen !== "advertiser-billing" && activeScreen !== "advertiser-reports" && activeScreen !== "manager-dashboard" && activeScreen !== "manager-publishers" && activeScreen !== "manager-offers-approval" && activeScreen !== "manager-communication" && activeScreen !== "manager-performance" && (
-                  <button
-                    onClick={() => setActiveScreen("admin-dashboard")}
-                    className="hidden md:inline-flex theme-bg-well border theme-border hover:bg-slate-100 dark:hover:bg-slate-900 theme-text-secondary hover:theme-text-main px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-wider transition font-medium select-none cursor-pointer duration-100"
-                  >
-                    Admin Panel
-                  </button>
-                )}
-                {activeScreen !== "admin-dashboard" && activeScreen !== "admin-publishers" && activeScreen !== "admin-offers" && activeScreen !== "admin-applications" && activeScreen !== "advertiser-dashboard" && activeScreen !== "advertiser-campaigns" && activeScreen !== "advertiser-tracking" && activeScreen !== "advertiser-billing" && activeScreen !== "advertiser-reports" && activeScreen !== "manager-dashboard" && activeScreen !== "manager-publishers" && activeScreen !== "manager-offers-approval" && activeScreen !== "manager-communication" && activeScreen !== "manager-performance" && (
-                  <button
-                    onClick={() => setActiveScreen("advertiser-dashboard")}
-                    className="hidden md:inline-flex theme-bg-well border theme-border hover:bg-slate-100 dark:hover:bg-slate-900 theme-text-secondary hover:theme-text-main px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-wider transition font-medium select-none cursor-pointer duration-100"
-                  >
-                    Advertiser Panel
-                  </button>
-                )}
-                {activeScreen !== "admin-dashboard" && activeScreen !== "admin-publishers" && activeScreen !== "admin-offers" && activeScreen !== "admin-applications" && activeScreen !== "advertiser-dashboard" && activeScreen !== "advertiser-campaigns" && activeScreen !== "advertiser-tracking" && activeScreen !== "advertiser-billing" && activeScreen !== "advertiser-reports" && activeScreen !== "manager-dashboard" && activeScreen !== "manager-publishers" && activeScreen !== "manager-offers-approval" && activeScreen !== "manager-communication" && activeScreen !== "manager-performance" && (
-                  <button
-                    onClick={() => setActiveScreen("manager-dashboard")}
-                    className="hidden md:inline-flex theme-bg-well border theme-border hover:bg-slate-100 dark:hover:bg-slate-900 theme-text-secondary hover:theme-text-main px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-wider transition font-medium select-none cursor-pointer duration-100"
-                  >
-                    Manager Panel
-                  </button>
-                )}
                 <button
                   onClick={() => {
                     setIsLoggedIn(false);
@@ -768,7 +677,7 @@ useEffect(() => {
                       <Layers className="w-4 h-4" />
                     </div>
                     <span className="text-sm font-black text-slate-950 font-mono uppercase">
-                      Apex<span className="text-cyan-600">Track</span>
+                      {branding.networkName}
                     </span>
                   </div>
                   <button
@@ -853,16 +762,20 @@ useEffect(() => {
               currentView={authScreen}
               setView={(view) => {
                 if (view === "app") {
+                  const role = localStorage.getItem("admin_token") ? "admin" : "publisher";
+                  setUserRole(role);
                   setIsLoggedIn(true);
-                  setActiveScreen("dashboard");
+                  setActiveScreen(role === "admin" ? "admin-dashboard" : "dashboard");
                 } else {
                   setAuthScreen(view);
                 }
               }}
               onLoginSuccess={(name) => {
                 if (name) setPublisherName(name);
+                const role = localStorage.getItem("admin_token") ? "admin" : "publisher";
+                setUserRole(role);
                 setIsLoggedIn(true);
-                setActiveScreen("dashboard");
+                setActiveScreen(role === "admin" ? "admin-dashboard" : "dashboard");
               }}
             />
           </div>

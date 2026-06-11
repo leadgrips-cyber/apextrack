@@ -1,14 +1,17 @@
 import React, { useState } from "react";
 import { Key, Copy, Check, RefreshCw, Terminal, ShieldAlert } from "lucide-react";
+import { useBranding } from "../contexts/BrandingContext";
 
 export function ApiAccessView() {
+  const branding = useBranding();
   const [apiKey, setApiKey] = useState("idx_pub_live_9a8f821c33b74052adef91e9ffd981h902");
   const [copied, setCopied] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
 
-  const curlExample = `curl -X GET "https://api.apextrack.com/v2/offers" \\
+  const apiHeaderName = `x-${branding.networkName.toLowerCase().replace(/\s+/g, "-")}-api-key`;
+  const curlExample = `curl -X GET "https://api.example.com/v2/offers" \\
   -H "Accept: application/json" \\
-  -H "x-apextrack-api-key: ${apiKey}"`;
+  -H "${apiHeaderName}: ${apiKey}"`;
 
   const handleCopyKey = () => {
     navigator.clipboard.writeText(apiKey);
@@ -53,7 +56,7 @@ export function ApiAccessView() {
               Private Security Authentication token
             </h3>
             <p className="text-slate-600 text-xs leading-relaxed">
-              Authenticate API loops by passing the following private hash token directly inside the <code>x-apextrack-api-key</code> HTTP request header.
+              Authenticate API loops by passing the following private hash token directly inside the <code>{apiHeaderName}</code> HTTP request header.
             </p>
             <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4">
               <code className="text-slate-900 font-mono text-xs break-all select-all font-semibold leading-normal">

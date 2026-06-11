@@ -1,27 +1,36 @@
 const API_URL = "http://localhost:3000/api";
 
+async function attemptLogin(email: string, password: string, role: "admin" | "publisher"): Promise<string | null> {
+  try {
+    const response = await fetch(`${API_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, role }),
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.accessToken ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function login(email: string, password: string) {
-  const response = await fetch(`${API_URL}/auth/login`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      email,
-      password,
-      role: "publisher",
-    }),
-  });
+  // Try both roles in parallel so a single set of credentials works for
+  // admin users, publisher users, or accounts that exist in both tables.
+  const [adminToken, publisherToken] = await Promise.all([
+    attemptLogin(email, password, "admin"),
+    attemptLogin(email, password, "publisher"),
+  ]);
 
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.message || "Login failed");
+  if (!adminToken && !publisherToken) {
+    throw new Error("Invalid credentials");
   }
 
-  localStorage.setItem("token", data.accessToken);
+  if (adminToken) localStorage.setItem("admin_token", adminToken);
+  if (publisherToken) localStorage.setItem("token", publisherToken);
 
-  return data;
+  return { accessToken: adminToken ?? publisherToken };
 }
 
 export async function register(
@@ -53,8 +62,10 @@ export async function register(
 
   return data;
 }
+
 export async function getCurrentUser() {
-  const token = localStorage.getItem("token");
+  // Prefer admin token so the admin panel gets a valid role back from /me.
+  const token = localStorage.getItem("admin_token") || localStorage.getItem("token");
 
   const response = await fetch(`${API_URL}/auth/me`, {
     headers: {

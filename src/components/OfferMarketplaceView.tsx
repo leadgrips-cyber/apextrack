@@ -25,9 +25,13 @@ import {
   Send,
   X,
   FileText,
-  Info
+  Info,
+  RefreshCw,
+  Plus
 } from "lucide-react";
 import { SYSTEM_POSTBACK_PLACEHOLDERS } from "../data/publisherDemo";
+import * as trackingApi from "../services/tracking";
+import { useBranding } from "../contexts/BrandingContext";
 
 const COUNTRY_OPTIONS = [
   { value: "", label: "All Countries" },
@@ -268,6 +272,7 @@ export function OfferMarketplaceView({
   setOffers,
   onAddNotification
 }: OfferMarketplaceViewProps) {
+  const branding = useBranding();
   const [categoryFilter, setCategoryFilter] = useState("");
   const [countryFilter, setCountryFilter] = useState("");
   const [offerNameFilter, setOfferNameFilter] = useState("");
@@ -283,12 +288,34 @@ export function OfferMarketplaceView({
   const [isLoadingOffers, setIsLoadingOffers] = useState(true);
   const [offersError, setOffersError] = useState<string | null>(null);
 
-  const normalizeApiOffer = (offer: any) => {
-    const status = offer.status || offer.offer_status || "";
-    const mappedStatus = status === "ACTIVE" ? "open_access" : status === "PAUSED" || status === "DRAFT" ? "requires_approval" : status.toString().toLowerCase();
+  const normalizeApiOffer = (offer: any, appMap: Record<string, string> = {}) => {
+    const dbStatus = offer.status || offer.offer_status || "";
+    const requiresApproval = offer.requires_publisher_approval ?? false;
+    const offerId = offer.id?.toString?.() ?? "";
+    const existingApp = appMap[offerId];
+
+    let mappedStatus: string;
+    if (dbStatus === "ACTIVE") {
+      if (!requiresApproval) {
+        mappedStatus = "open_access";
+      } else if (existingApp === "APPROVED") {
+        mappedStatus = "approved";
+      } else if (existingApp === "PENDING") {
+        mappedStatus = "pending_approval";
+      } else if (existingApp === "REJECTED") {
+        mappedStatus = "rejected";
+      } else {
+        mappedStatus = "requires_approval";
+      }
+    } else {
+      // PAUSED, DRAFT, ARCHIVED, EXHAUSTED, CLOSED — not visible to publishers
+      mappedStatus = "unavailable";
+    }
+
+    // Explicit allowlist — no spread. Advertiser fields are intentionally excluded.
+    // Publishers must never receive advertiser_id, advertiser_name, or any advertiser metadata.
     return {
-      ...offer,
-      id: offer.id?.toString?.() ?? "",
+      id: offerId,
       name: offer.name ?? "Untitled Offer",
       category: offer.category ?? "General",
       status: mappedStatus,
@@ -298,15 +325,26 @@ export function OfferMarketplaceView({
       geos: Array.isArray(offer.target_geos) ? offer.target_geos : Array.isArray(offer.geos) ? offer.geos : [],
       devices: Array.isArray(offer.target_devices) ? offer.target_devices.join(", ") : offer.target_devices ?? offer.devices ?? "",
       rawUrl: offer.landing_page_url ?? offer.rawUrl ?? "",
-      caps: offer.caps ?? "Live offer details available on request",
+      caps: typeof offer.caps === "string" ? offer.caps : offer.caps != null ? "Live offer details available on request" : "Live offer details available on request",
       landing_page_url: offer.landing_page_url ?? offer.rawUrl ?? "",
-      requires_publisher_approval: offer.requires_publisher_approval ?? false,
+      requires_publisher_approval: requiresApproval,
+      slug: offer.slug ?? "",
+      terms: offer.terms ?? "",
+      tracking_protocol: offer.tracking_protocol ?? "S2S",
+      target_geos: Array.isArray(offer.target_geos) ? offer.target_geos : [],
+      target_devices: Array.isArray(offer.target_devices) ? offer.target_devices : [],
+      description: offer.description ?? "",
+      landers: Array.isArray(offer.landers) ? offer.landers : [],
+      creatives: Array.isArray(offer.creatives) ? offer.creatives : [],
+      trafficRestrictions: Array.isArray(offer.trafficRestrictions) ? offer.trafficRestrictions : [],
+      specs: offer.specs ?? null,
+      rejectionReason: offer.rejectionReason ?? null,
     };
   };
 
   useEffect(() => {
     let active = true;
-    const fetchMarketplaceOffers = async () => {
+    const fetchData = async () => {
       setIsLoadingOffers(true);
       setOffersError(null);
 
@@ -319,22 +357,37 @@ export function OfferMarketplaceView({
       }
 
       try {
-        const response = await fetch("http://localhost:3000/api/offers", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const [offersRes, appsRes] = await Promise.all([
+          fetch("http://localhost:3000/api/offers", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch("http://localhost:3000/api/applications/me", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
 
-        if (!response.ok) {
-          throw new Error(`Failed to load offers: ${response.status}`);
+        if (!offersRes.ok) {
+          throw new Error(`Failed to load offers: ${offersRes.status}`);
         }
 
-       const data = await response.json();
+        const offersData = await offersRes.json();
 
-const mappedOffers = Array.isArray(data.offers)
-  ? data.offers.map(normalizeApiOffer)
-  : [];
+        const appMap: Record<string, string> = {};
+        if (appsRes.ok) {
+          const appsData = await appsRes.json();
+          if (Array.isArray(appsData.applications)) {
+            appsData.applications.forEach((app: any) => {
+              appMap[String(app.offer_id)] = app.status;
+            });
+          }
+        }
+
         if (!active) return;
+        setApplicationMap(appMap);
+
+        const mappedOffers = Array.isArray(offersData.offers)
+          ? offersData.offers.map((o: any) => normalizeApiOffer(o, appMap))
+          : [];
         setMarketplaceOffers(mappedOffers);
       } catch (error: any) {
         if (!active) return;
@@ -345,7 +398,7 @@ const mappedOffers = Array.isArray(data.offers)
       }
     };
 
-    fetchMarketplaceOffers();
+    fetchData();
     return () => {
       active = false;
     };
@@ -356,6 +409,11 @@ const mappedOffers = Array.isArray(data.offers)
   const [pubSub2, setPubSub2] = useState("");
   const [selectedLanderId, setSelectedLanderId] = useState("");
 
+  // Tracking link generated via backend API — same architecture as TrackingLinkView
+  const [detailLink, setDetailLink] = useState<trackingApi.TrackingLink | null>(null);
+  const [isGeneratingDetailLink, setIsGeneratingDetailLink] = useState(false);
+  const [detailLinkError, setDetailLinkError] = useState<string | null>(null);
+
   // Postback states inside Offer Detail
   const [postbackUrlInput, setPostbackUrlInput] = useState("");
   const [pbTrigger, setPbTrigger] = useState("conversion");
@@ -365,10 +423,10 @@ const mappedOffers = Array.isArray(data.offers)
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [promotionalMethodInput, setPromotionalMethodInput] = useState("");
   const [primaryTrafficInput, setPrimaryTrafficInput] = useState("");
-  const [estimatedDailyVolumeInput, setEstimatedDailyVolumeInput] = useState("");
-  const [landingPageUrlInput, setLandingPageUrlInput] = useState("");
-  const [additionalNotesInput, setAdditionalNotesInput] = useState("");
   const [targetRequestOfferId, setTargetRequestOfferId] = useState<string | null>(null);
+  const [applicationMap, setApplicationMap] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Admin Panel states
   const [adminRejectionReason, setAdminRejectionReason] = useState("");
@@ -399,8 +457,12 @@ const mappedOffers = Array.isArray(data.offers)
     return unique.sort((a, b) => a.localeCompare(b));
   }, [marketplaceOffers]);
 
+  // Only these statuses are derived from ACTIVE offers and are visible in the marketplace
+  const MARKETPLACE_VISIBLE = new Set(["open_access", "requires_approval", "approved", "pending_approval", "rejected"]);
+
   const filteredOffers = useMemo(() => {
     return marketplaceOffers.filter((offer) => {
+      if (!MARKETPLACE_VISIBLE.has(offer.status)) return false;
       const matchesCategory = !appliedFilters.category || offer.category === appliedFilters.category;
       const matchesCountry = !appliedFilters.country || offer.geos.includes(appliedFilters.country);
       const matchesName = !appliedFilters.name || offer.name.toLowerCase().includes(appliedFilters.name.toLowerCase());
@@ -415,15 +477,31 @@ const mappedOffers = Array.isArray(data.offers)
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  // Helper compiled tracking link
-  const generatedTrackingUrl = useMemo(() => {
-    if (!currentOffer) return "";
-    let url = `https://track.apextrack.com/click?aff_id=2081&offer_id=${currentOffer.id}`;
-    if (selectedLanderId) url += `&lander_id=${selectedLanderId}`;
-    if (pubSub1) url += `&sub1=${encodeURIComponent(pubSub1)}`;
-    if (pubSub2) url += `&sub2=${encodeURIComponent(pubSub2)}`;
-    return url;
-  }, [currentOffer, selectedLanderId, pubSub1, pubSub2]);
+  // Reset generated link when offer changes
+  useEffect(() => {
+    setDetailLink(null);
+    setDetailLinkError(null);
+  }, [currentOffer?.id]);
+
+  const handleGenerateDetailLink = async () => {
+    if (!currentOffer) return;
+    setIsGeneratingDetailLink(true);
+    setDetailLinkError(null);
+    try {
+      const link = await trackingApi.generateTrackingLink({
+        offer_id: Number(currentOffer.id),
+        sub1: pubSub1 || undefined,
+        sub2: pubSub2 || undefined,
+      });
+      setDetailLink(link);
+    } catch (err: any) {
+      setDetailLinkError(err.message || "Failed to generate tracking link");
+    } finally {
+      setIsGeneratingDetailLink(false);
+    }
+  };
+
+  const detailLinkUrl = detailLink ? branding.trackingDomain + detailLink.tracking_url : null;
 
   // Simulated postback save trigger
   const handleSaveOfferPostback = (e: React.FormEvent) => {
@@ -437,35 +515,65 @@ const mappedOffers = Array.isArray(data.offers)
     setTargetRequestOfferId(offerId);
     setPromotionalMethodInput("");
     setPrimaryTrafficInput("");
-    setEstimatedDailyVolumeInput("");
-    setLandingPageUrlInput("");
-    setAdditionalNotesInput("");
+    setSubmitError(null);
     setShowRequestModal(true);
   };
 
   // Submit request access handler
-  const handleSubmitRequestAccess = (e: React.FormEvent) => {
+  const handleSubmitRequestAccess = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!targetRequestOfferId) return;
 
-    // Transition offer status to pending_approval in state
-    setOffers(prevOffers => prevOffers.map(o => {
-      if (o.id === targetRequestOfferId) {
-        return { ...o, status: "pending_approval" };
+    setSubmitting(true);
+    setSubmitError(null);
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setSubmitError("Not authenticated.");
+      setSubmitting(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:3000/api/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          offer_id: Number(targetRequestOfferId),
+          comments: promotionalMethodInput,
+          submission_data: {
+            traffic_source: primaryTrafficInput,
+            promotion_method: promotionalMethodInput,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error((data as any).message || "Failed to submit request.");
       }
-      return o;
-    }));
 
-    // Raise notification
-    onAddNotification(
-      "announcement",
-      "Offer Access Requested",
-      `Your traffic request for Campaign #${targetRequestOfferId} is now pending network representative security audit.`,
-      targetRequestOfferId
-    );
+      setApplicationMap(prev => ({ ...prev, [targetRequestOfferId]: "PENDING" }));
+      setMarketplaceOffers(prev =>
+        prev.map(o => o.id === targetRequestOfferId ? { ...o, status: "pending_approval" } : o)
+      );
 
-    setShowRequestModal(false);
-    setTargetRequestOfferId(null);
+      onAddNotification(
+        "announcement",
+        "Offer Access Requested",
+        `Your traffic request for Campaign #${targetRequestOfferId} is now pending network representative security audit.`,
+        targetRequestOfferId
+      );
+
+      setShowRequestModal(false);
+      setTargetRequestOfferId(null);
+      setPromotionalMethodInput("");
+      setPrimaryTrafficInput("");
+    } catch (err: any) {
+      setSubmitError(err.message || "An error occurred. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // Admin Direct State Update Simulation
@@ -766,7 +874,7 @@ const mappedOffers = Array.isArray(data.offers)
                           <span className="text-[10px] text-slate-500 font-mono uppercase">Size: {creative.size} / {creative.type}</span>
                         </div>
                         <button
-                          onClick={() => handleCopy(`<a href="${generatedTrackingUrl}"><img src="https://media-server.apextrack.com/ad/${creative.id}" width="${creative.size.split('x')[0]}" height="${creative.size.split('x')[1]}"/></a>`, `creative_${creative.id}`)}
+                          onClick={() => handleCopy(`<a href="${detailLinkUrl ?? ''}"><img src="${creative.url || ''}" width="${creative.size.split('x')[0]}" height="${creative.size.split('x')[1]}"/></a>`, `creative_${creative.id}`)}
                           className="bg-slate-900 hover:bg-slate-850 text-cyan-400 text-[10px] font-mono px-2 py-1 rounded border border-slate-800 shrink-0"
                         >
                           {copiedKey === `creative_${creative.id}` ? "Copied HTML!" : "Get Tag"}
@@ -889,32 +997,56 @@ const mappedOffers = Array.isArray(data.offers)
                       </div>
                     </div>
 
-                    {/* Generated code results block */}
-                    <div className="space-y-1 pt-1">
+                    {/* Tracking link generate & display */}
+                    <div className="space-y-2 pt-1">
                       <span className="block text-[10px] uppercase font-bold text-slate-400">
-                        Ready Generated Tracking URL
+                        Tracking URL
                       </span>
-                      <div className="p-3 bg-slate-950 rounded-xl border border-slate-850 space-y-2">
-                        <p className="text-[11px] font-mono text-cyan-300 break-all select-all leading-normal">
-                          {generatedTrackingUrl}
-                        </p>
+
+                      {detailLinkError && (
+                        <div className="bg-rose-950/40 border border-rose-800 text-rose-300 text-[10px] p-2.5 rounded-lg font-mono">
+                          {detailLinkError}
+                        </div>
+                      )}
+
+                      {detailLinkUrl ? (
+                        <div className="p-3 bg-slate-950 rounded-xl border border-slate-850 space-y-2">
+                          <p className="text-[11px] font-mono text-cyan-300 break-all select-all leading-normal">
+                            {detailLinkUrl}
+                          </p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleCopy(detailLinkUrl, "aff_tracking_link")}
+                              className="flex-1 bg-slate-900 hover:bg-slate-850 text-slate-300 hover:text-white py-1.5 rounded-lg border border-slate-800 text-[10px] font-bold uppercase tracking-wider transition flex items-center justify-center gap-1 select-none cursor-pointer"
+                            >
+                              {copiedKey === "aff_tracking_link" ? (
+                                <><Check className="w-3.5 h-3.5 text-emerald-400" />Copied!</>
+                              ) : (
+                                <><Copy className="w-3.5 h-3.5" />Copy URL</>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => { setDetailLink(null); setDetailLinkError(null); }}
+                              className="px-3 bg-slate-900 hover:bg-slate-850 text-slate-400 py-1.5 rounded-lg border border-slate-800 text-[10px] transition cursor-pointer"
+                              title="Generate new link"
+                            >
+                              <RefreshCw className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
                         <button
-                          onClick={() => handleCopy(generatedTrackingUrl, "aff_tracking_link")}
-                          className="w-full bg-slate-900 hover:bg-slate-850 text-slate-300 hover:text-white py-1.5 rounded-lg border border-slate-800 text-[10px] font-bold uppercase tracking-wider transition flex items-center justify-center gap-1 select-none cursor-pointer"
+                          onClick={handleGenerateDetailLink}
+                          disabled={isGeneratingDetailLink}
+                          className="w-full bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-slate-950 font-bold py-2.5 rounded-xl text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer"
                         >
-                          {copiedKey === "aff_tracking_link" ? (
-                            <>
-                              <Check className="w-3.5 h-3.5 text-emerald-400" />
-                              Copied Link Asset
-                            </>
+                          {isGeneratingDetailLink ? (
+                            <><RefreshCw className="w-3.5 h-3.5 animate-spin" />Generating…</>
                           ) : (
-                            <>
-                              <Copy className="w-3.5 h-3.5" />
-                              Copy Tracking URL
-                            </>
+                            <><Plus className="w-3.5 h-3.5" />Generate & Save Link</>
                           )}
                         </button>
-                      </div>
+                      )}
                     </div>
 
                   </div>
@@ -1069,7 +1201,7 @@ const mappedOffers = Array.isArray(data.offers)
               </div>
 
               <form onSubmit={handleSubmitRequestAccess} className="space-y-4 text-xs">
-                
+
                 <div className="space-y-1 pb-1">
                   <label className="block text-[10px] uppercase font-bold text-slate-505 dark:text-slate-400 font-mono">
                     1. How will you promote this offer? <span className="text-rose-500 font-bold">*</span>
@@ -1098,56 +1230,23 @@ const mappedOffers = Array.isArray(data.offers)
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="block text-[10px] uppercase font-bold text-slate-505 dark:text-slate-400 font-mono">
-                    3. Estimated Daily Volume <span className="text-rose-500 font-bold">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={estimatedDailyVolumeInput}
-                    onChange={(e) => setEstimatedDailyVolumeInput(e.target.value)}
-                    placeholder="e.g. 500+ clicks/day, 50 conversions/day"
-                    className="block w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl text-slate-855 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-700 focus:outline-none focus:border-cyan-500 text-xs"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-[10px] uppercase font-bold text-slate-505 dark:text-slate-400 font-mono">
-                    4. Landing Page URL <span className="text-slate-400">(optional)</span>
-                  </label>
-                  <input
-                    type="url"
-                    value={landingPageUrlInput}
-                    onChange={(e) => setLandingPageUrlInput(e.target.value)}
-                    placeholder="https://yourbrand.com/prelander"
-                    className="block w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl text-slate-855 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-700 focus:outline-none focus:border-cyan-505 text-xs font-mono"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-[10px] uppercase font-bold text-slate-505 dark:text-slate-400 font-mono">
-                    5. Additional Notes <span className="text-slate-400">(optional)</span>
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={additionalNotesInput}
-                    onChange={(e) => setAdditionalNotesInput(e.target.value)}
-                    placeholder="Any comments, requests for custom tracker nodes etc."
-                    className="block w-full p-3 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl text-slate-855 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-700 focus:outline-none focus:border-cyan-500 text-xs"
-                  />
-                </div>
-
                 <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-850 text-[10.5px] text-slate-500 dark:text-slate-400 leading-normal font-mono flex items-start gap-2">
                   <Info className="w-5 h-5 text-cyan-600 dark:text-cyan-400 shrink-0 mt-0.5" />
                   <span>By submitting, Campaign Access will transition to <strong>Pending Approval</strong> state immediately in compliance with affiliate standard reviews.</span>
                 </div>
 
+                {submitError && (
+                  <div className="bg-rose-50 border border-rose-200 text-rose-700 p-2.5 rounded-xl text-[11px] font-mono">
+                    {submitError}
+                  </div>
+                )}
+
                 <button
                   type="submit"
-                  className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold py-3 rounded-xl uppercase font-mono tracking-wider transition cursor-pointer"
+                  disabled={submitting}
+                  className="w-full bg-cyan-500 hover:bg-cyan-400 disabled:opacity-60 disabled:cursor-not-allowed text-slate-950 font-extrabold py-3 rounded-xl uppercase font-mono tracking-wider transition cursor-pointer"
                 >
-                  Submit Request
+                  {submitting ? "Submitting…" : "Submit Request"}
                 </button>
 
               </form>
@@ -1428,6 +1527,85 @@ const mappedOffers = Array.isArray(data.offers)
         )}
 
       </div>
+
+      {/* REQUEST ACCESS MODAL — rendered in list view */}
+      {showRequestModal && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn" id="request-access-modal">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative space-y-4">
+
+            <button
+              onClick={() => setShowRequestModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white p-1.5 rounded-lg bg-slate-950 border border-slate-800 transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="space-y-1">
+              <span className="bg-cyan-100 dark:bg-cyan-950 border border-cyan-200 dark:border-cyan-900 text-cyan-700 dark:text-cyan-400 text-[9px] font-mono font-bold px-2 py-0.5 rounded uppercase">
+                Audits Handshake Access Request
+              </span>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+                Applying for ID #{targetRequestOfferId} Campaign Access
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Supply promotion methods to bypass manual hold parameters instantly.
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmitRequestAccess} className="space-y-4 text-xs">
+
+              <div className="space-y-1 pb-1">
+                <label className="block text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 font-mono">
+                  1. How will you promote this offer? <span className="text-rose-500 font-bold">*</span>
+                </label>
+                <textarea
+                  required
+                  rows={2}
+                  value={promotionalMethodInput}
+                  onChange={(e) => setPromotionalMethodInput(e.target.value)}
+                  placeholder="Describe direct marketing pathways (e.g., standard newsletters to 15k finance subs, Facebook lookalike campaigns)..."
+                  className="block w-full p-3 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl text-slate-850 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-700 focus:outline-none focus:border-cyan-500 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 font-mono">
+                  2. Traffic Source <span className="text-rose-500 font-bold">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={primaryTrafficInput}
+                  onChange={(e) => setPrimaryTrafficInput(e.target.value)}
+                  placeholder="e.g. Email Lists, Native RevContent, SEO portals"
+                  className="block w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl text-slate-855 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-700 focus:outline-none focus:border-cyan-500 text-xs"
+                />
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-850 text-[10.5px] text-slate-500 dark:text-slate-400 leading-normal font-mono flex items-start gap-2">
+                <Info className="w-5 h-5 text-cyan-600 dark:text-cyan-400 shrink-0 mt-0.5" />
+                <span>By submitting, Campaign Access will transition to <strong>Pending Approval</strong> state immediately in compliance with affiliate standard reviews.</span>
+              </div>
+
+              {submitError && (
+                <div className="bg-rose-50 border border-rose-200 text-rose-700 p-2.5 rounded-xl text-[11px] font-mono">
+                  {submitError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full bg-cyan-500 hover:bg-cyan-400 disabled:opacity-60 disabled:cursor-not-allowed text-slate-950 font-extrabold py-3 rounded-xl uppercase font-mono tracking-wider transition cursor-pointer"
+              >
+                {submitting ? "Submitting…" : "Submit Request"}
+              </button>
+
+            </form>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );

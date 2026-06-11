@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from "react";
 import * as authApi from "../services/auth";
 import { User, Mail, ShieldAlert, Settings, Sliders, CheckCircle, Phone, Globe, MapPin, Building, Hash, Lock, ShieldCheck } from "lucide-react";
+import { useBranding } from "../contexts/BrandingContext";
 
 export function ProfileSettingsView() {
+  const branding = useBranding();
+
   // Personal & Company Information state
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -475,7 +478,7 @@ export function ProfileSettingsView() {
 
           <div className="theme-bg-well border theme-border p-3.5 rounded-xl text-[10px] theme-text-secondary">
             <span className="font-bold text-cyan-600 dark:text-cyan-400 block font-mono">SECURITY HARMONIZATION</span>
-            All verified publishers on Level-3 ApexTrack commission schemes must maintain authenticated communication channels to secure payment disbursements wallets against MITM threat channels.
+            All verified publishers on Level-3 {branding.networkName} commission schemes must maintain authenticated communication channels to secure payment disbursements wallets against MITM threat channels.
           </div>
 
         </div>

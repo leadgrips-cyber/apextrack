@@ -67,8 +67,8 @@ export async function handlePostback(payload: PostbackRequestPayload, rawPayload
     description = 'Rejected conversion recorded';
   }
 
-  const result = await postbackRepository.runTransaction(async (client) => {
-    const conversion = await postbackRepository.createConversion(client, {
+  const conversion = await postbackRepository.runTransaction(async (client) => {
+    const created = await postbackRepository.createConversion(client, {
       click_id: payload.click_id,
       offer_id: click.offer_id,
       publisher_id: click.publisher_id,
@@ -93,7 +93,7 @@ export async function handlePostback(payload: PostbackRequestPayload, rawPayload
     await postbackRepository.createWalletTransaction(client, {
       wallet_id: updatedWallet.id,
       publisher_id: click.publisher_id,
-      conversion_id: conversion.id,
+      conversion_id: created.id,
       offer_id: click.offer_id,
       transaction_type: transactionType,
       amount: status === 'rejected' ? 0 : payoutAmount,
@@ -107,18 +107,14 @@ export async function handlePostback(payload: PostbackRequestPayload, rawPayload
       },
     });
 
-    await postbackRepository.savePostbackLog(client, {
-      conversion_id: conversion.id,
-      click_id: click.click_id,
-      offer_id: click.offer_id,
-      publisher_id: click.publisher_id,
-      payload: rawPayload,
-      status: status.toUpperCase(),
-    });
-
-    return conversion;
+    return created;
   });
 
-  await publisherPostbackService.processPublisherPostbacksForConversion(click, result, status);
-  return result;
+  try {
+    await publisherPostbackService.enqueuePublisherPostbacks(click, conversion, status);
+  } catch (err) {
+    console.error('[postback] Failed to enqueue publisher postbacks:', err);
+  }
+
+  return conversion;
 }

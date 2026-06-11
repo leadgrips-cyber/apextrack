@@ -8,6 +8,7 @@ interface AdminLayoutProps {
   adminName: string;
   onLogout: () => void;
   onReturnToPublisher?: () => void;
+  onCreateOffer?: () => void;
   children: React.ReactNode;
 }
 
@@ -17,6 +18,7 @@ export function AdminLayout({
   adminName,
   onLogout,
   onReturnToPublisher,
+  onCreateOffer,
   children,
 }: AdminLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -60,7 +62,10 @@ export function AdminLayout({
               </button>
             )}
 
-            <button className="group flex items-center gap-2 rounded-xl bg-cyan-600 px-3 py-2 text-xs font-semibold text-white hover:bg-cyan-500 transition">
+            <button
+              onClick={onCreateOffer}
+              className="group flex items-center gap-2 rounded-xl bg-cyan-600 px-3 py-2 text-xs font-semibold text-white hover:bg-cyan-500 transition"
+            >
               <Plus className="w-4 h-4" />
               New Offer
             </button>
@@ -84,8 +89,14 @@ export function AdminLayout({
                   items: [
                     { id: "admin-dashboard", label: "Dashboard" },
                     { id: "admin-publishers", label: "Publisher Management" },
-                    { id: "admin-offers", label: "Offer Management" },
-                    { id: "admin-applications", label: "Application Review" },
+                  ],
+                },
+                {
+                  title: "Offer Management",
+                  items: [
+                    { id: "admin-offers", label: "Offer List" },
+                    { id: "admin-applications", label: "Pending Offer Requests" },
+                    { id: "admin-offer-create", label: "Create Offer" },
                   ],
                 },
                 {
@@ -140,6 +151,7 @@ export function AdminLayout({
                   title: "System",
                   items: [
                     { id: "admin-system-settings", label: "Settings" },
+                    { id: "admin-network-settings", label: "Network Settings" },
                     { id: "admin-system-roles", label: "Roles & Permissions" },
                     { id: "admin-system-audit", label: "Audit Logs" },
                   ],

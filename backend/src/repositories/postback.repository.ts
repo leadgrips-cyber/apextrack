@@ -1,6 +1,6 @@
 import { PoolClient } from 'pg';
 import { query, pool } from "../db/index.js";
-import { ConversionRecord, PostbackLogRecord, WalletRecord, WalletTransactionRecord, PostbackRequestPayload } from "../types/postback.js";
+import { ConversionRecord, WalletRecord, WalletTransactionRecord } from "../types/postback.js";
 
 export async function findClickById(clickId: string) {
   const result = await query<{
@@ -141,37 +141,43 @@ export async function createWalletTransaction(client: PoolClient, params: {
   return result.rows[0];
 }
 
-export async function savePostbackLog(client: PoolClient, params: {
+export async function insertPostbackQueueEntry(params: {
   conversion_id: string;
-  click_id: string;
   offer_id: number;
   publisher_id: string;
-  payload: Record<string, unknown>;
-  status: string;
-}) {
-  const result = await client.query<PostbackLogRecord>(
+  publisher_postback_id: string;
+  click_id: string;
+  destination_url: string;
+  http_method: string;
+  payload: Record<string, string>;
+}): Promise<void> {
+  await query(
     `INSERT INTO postbacks (
        conversion_id,
        offer_id,
        publisher_id,
+       publisher_postback_id,
+       click_id,
        destination_url,
+       http_method,
        payload,
        status,
        attempt_count,
+       next_retry_at,
        created_at,
        updated_at
-     ) VALUES ($1,$2,$3,$4,$5,$6,1,NOW(),NOW())
-     RETURNING *`,
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'QUEUED',0,NOW(),NOW(),NOW())`,
     [
       params.conversion_id,
       params.offer_id,
       params.publisher_id,
-      '',
+      params.publisher_postback_id,
+      params.click_id,
+      params.destination_url,
+      params.http_method,
       params.payload,
-      params.status.toUpperCase(),
     ]
   );
-  return result.rows[0];
 }
 
 export async function runTransaction<T>(callback: (client: PoolClient) => Promise<T>) {

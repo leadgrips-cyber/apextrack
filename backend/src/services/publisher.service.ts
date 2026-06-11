@@ -1,6 +1,7 @@
 import * as publisherRepository from "../repositories/publisher.repository.js";
 import { OfferApplicationRecord } from "../types/application.js";
 import { TrackingLinkRecord } from "../types/tracking.js";
+import { hashPassword } from "../utils/hash.js";
 
 export interface PublisherPerformanceSummary {
   total_clicks: number;
@@ -20,6 +21,10 @@ export interface PublisherListResult {
     page: number;
     pageSize: number;
   };
+}
+
+export interface ManagerListResult {
+  managers: publisherRepository.ManagerRecord[];
 }
 
 const VALID_ACCOUNT_STATUSES = ['pending', 'active', 'suspended', 'blocked'] as const;
@@ -57,6 +62,7 @@ function sanitizePublisherRow(
     account_status: formatStatus(row.account_status),
     approval_status: row.approval_status,
     assigned_manager_id: row.assigned_manager_id,
+    manager_name: row.manager_name || null,
     affiliate_code: row.affiliate_code,
     is_active: row.is_active,
     currency: row.currency,
@@ -163,4 +169,77 @@ export async function listPublisherApplications(publisherId: string): Promise<Of
 
 export async function listPublisherTrackingLinks(publisherId: string): Promise<TrackingLinkRecord[]> {
   return publisherRepository.findPublisherTrackingLinksByPublisher(publisherId);
+}
+
+export async function listManagers(): Promise<ManagerListResult> {
+  const managers = await publisherRepository.findManagersForAssignment();
+  return { managers };
+}
+
+export interface AdminCreatePublisherInput {
+  first_name: string;
+  last_name: string;
+  email: string;
+  password: string;
+  country_code: string;
+  status: 'PENDING' | 'ACTIVE' | 'SUSPENDED';
+  assigned_manager_id: string | null;
+  telegram: string | null;
+  skype: string | null;
+  whatsapp: string | null;
+  tracking_domain: string | null;
+  traffic_source: string | null;
+  postback_url: string | null;
+}
+
+export async function adminCreatePublisher(input: AdminCreatePublisherInput) {
+  const password_hash = await hashPassword(input.password);
+
+  const is_active = input.status === 'ACTIVE';
+  const approval_status = input.status === 'ACTIVE' ? 'APPROVED' : 'PENDING';
+
+  let created: publisherRepository.PublisherAdminRecord;
+  try {
+    created = await publisherRepository.insertPublisherByAdmin({
+      first_name: input.first_name,
+      last_name: input.last_name,
+      email: input.email,
+      password_hash,
+      country_code: input.country_code,
+      account_status: input.status,
+      approval_status,
+      is_active,
+      assigned_manager_id: input.assigned_manager_id,
+      telegram: input.telegram,
+      skype: input.skype,
+      whatsapp: input.whatsapp,
+      tracking_domain: input.tracking_domain,
+      traffic_source: input.traffic_source,
+      postback_url: input.postback_url,
+    });
+  } catch (err: any) {
+    if (err.code === '23505') {
+      throw new Error('A publisher with this email already exists');
+    }
+    throw err;
+  }
+
+  return sanitizePublisherRow(created);
+}
+
+export async function assignManager(publisherId: string, managerId: string) {
+  const manager = await publisherRepository.findAdminById(managerId);
+  if (!manager) {
+    throw new Error('Manager not found');
+  }
+
+  const updated = await publisherRepository.updatePublisherStatus(publisherId, {
+    assigned_manager_id: managerId,
+  });
+  if (!updated) {
+    throw new Error('Publisher not found');
+  }
+
+  // Re-fetch to get manager_name from the JOIN
+  return getPublisherDetails(publisherId);
 }

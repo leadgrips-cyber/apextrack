@@ -8,8 +8,8 @@ export async function applyForOffer(publisherId: string, payload: ApplicationCre
     throw new Error('Offer not found');
   }
 
-  if (offer.status === 'ARCHIVED' || offer.status === 'CLOSED') {
-    throw new Error('Cannot apply for a closed or archived offer');
+  if (offer.status !== 'ACTIVE') {
+    throw new Error('Cannot apply for an offer that is not active');
   }
 
   const existing = await applicationRepository.findApplicationByOfferAndPublisher(payload.offer_id, publisherId);

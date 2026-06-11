@@ -1,10 +1,13 @@
 import { NextFunction, Response } from 'express';
 import { AuthRequest } from "../types/auth.js";
 import {
+  adminCreatePublisher,
   approvePublisher,
+  assignManager,
   blockPublisher,
   getPublisherDetails,
   getPublisherWallet,
+  listManagers,
   listPublisherApplications,
   listPublisherTrackingLinks,
   listPublishers,
@@ -113,6 +116,93 @@ export async function handleListPublisherTrackingLinks(req: AuthRequest, res: Re
     const publisherId = req.params.id;
     const trackingLinks = await listPublisherTrackingLinks(publisherId);
     res.json({ trackingLinks });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function handleListManagers(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const result = await listManagers();
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function handleAdminCreatePublisher(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const {
+      first_name, last_name, email, password, country_code,
+      status, assigned_manager_id, telegram, skype, whatsapp,
+      tracking_domain, traffic_source, postback_url,
+    } = req.body as Record<string, unknown>;
+
+    if (!first_name || typeof first_name !== 'string' || !first_name.trim()) {
+      res.status(400).json({ message: 'first_name is required' });
+      return;
+    }
+    if (!last_name || typeof last_name !== 'string' || !last_name.trim()) {
+      res.status(400).json({ message: 'last_name is required' });
+      return;
+    }
+    if (!email || typeof email !== 'string' || !email.trim()) {
+      res.status(400).json({ message: 'email is required' });
+      return;
+    }
+    if (!password || typeof password !== 'string' || (password as string).length < 8) {
+      res.status(400).json({ message: 'password must be at least 8 characters' });
+      return;
+    }
+    if (!country_code || typeof country_code !== 'string') {
+      res.status(400).json({ message: 'country_code is required' });
+      return;
+    }
+    const validStatuses = ['PENDING', 'ACTIVE', 'SUSPENDED'] as const;
+    if (!status || !validStatuses.includes(status as typeof validStatuses[number])) {
+      res.status(400).json({ message: 'status must be PENDING, ACTIVE, or SUSPENDED' });
+      return;
+    }
+
+    const str = (v: unknown): string | null =>
+      typeof v === 'string' && v.trim() ? v.trim() : null;
+
+    const publisher = await adminCreatePublisher({
+      first_name: (first_name as string).trim(),
+      last_name: (last_name as string).trim(),
+      email: (email as string).trim().toLowerCase(),
+      password: password as string,
+      country_code: (country_code as string).trim().toUpperCase(),
+      status: status as 'PENDING' | 'ACTIVE' | 'SUSPENDED',
+      assigned_manager_id: str(assigned_manager_id),
+      telegram: str(telegram),
+      skype: str(skype),
+      whatsapp: str(whatsapp),
+      tracking_domain: str(tracking_domain),
+      traffic_source: str(traffic_source),
+      postback_url: str(postback_url),
+    });
+
+    res.status(201).json({ publisher });
+  } catch (error: any) {
+    if (error.message === 'A publisher with this email already exists') {
+      res.status(400).json({ message: error.message });
+      return;
+    }
+    next(error);
+  }
+}
+
+export async function handleAssignManager(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const publisherId = req.params.id;
+    const { manager_id } = req.body as { manager_id?: string };
+    if (!manager_id || typeof manager_id !== 'string' || !manager_id.trim()) {
+      res.status(400).json({ message: 'manager_id is required' });
+      return;
+    }
+    const publisher = await assignManager(publisherId, manager_id.trim());
+    res.json({ publisher });
   } catch (error) {
     next(error);
   }

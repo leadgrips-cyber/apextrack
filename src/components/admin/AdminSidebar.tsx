@@ -19,7 +19,9 @@ import {
   UserCheck,
   ChevronDown,
   LogOut,
+  Globe,
 } from "lucide-react";
+import { useBranding } from "../../contexts/BrandingContext";
 
 interface AdminSidebarProps {
   activeSection: string;
@@ -34,9 +36,16 @@ const navGroups = [
     icon: LayoutGrid,
     items: [
       { id: "admin-dashboard", label: "Dashboard", icon: LayoutGrid },
-      { id: "admin-publishers", label: "Publisher Management", icon: Users },
-      { id: "admin-offers", label: "Offer Management", icon: Tag },
-      { id: "admin-applications", label: "Application Review", icon: ClipboardList },
+    ],
+  },
+  {
+    id: "offers",
+    label: "Offer Management",
+    icon: Tag,
+    items: [
+      { id: "admin-offers", label: "Offer List", icon: ListChecks },
+      { id: "admin-applications", label: "Pending Offer Requests", icon: ClipboardList },
+      { id: "admin-offer-create", label: "Create Offer", icon: Plus },
     ],
   },
   {
@@ -103,6 +112,7 @@ const navGroups = [
     icon: Settings,
     items: [
       { id: "admin-system-settings", label: "Settings", icon: Settings },
+      { id: "admin-network-settings", label: "Network Settings", icon: Globe },
       { id: "admin-system-roles", label: "Roles & Permissions", icon: Shield },
       { id: "admin-system-audit", label: "Audit Logs", icon: ClipboardList },
     ],
@@ -110,6 +120,7 @@ const navGroups = [
 ];
 
 export function AdminSidebar({ activeSection, setActiveSection, onLogout }: AdminSidebarProps) {
+  const branding = useBranding();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(Object.fromEntries(navGroups.map((group) => [group.id, true])));
 
   return (
@@ -120,7 +131,7 @@ export function AdminSidebar({ activeSection, setActiveSection, onLogout }: Admi
             <LayoutGrid className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-sm font-black uppercase tracking-[0.25em] theme-text-main">ApexTrack</div>
+            <div className="text-sm font-black uppercase tracking-[0.25em] theme-text-main">{branding.networkName}</div>
             <div className="text-[10px] theme-text-muted uppercase tracking-widest font-mono pt-0.5">Admin Console</div>
           </div>
         </div>

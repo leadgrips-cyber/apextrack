@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import * as authApi from "../services/auth";
+import { useBranding } from "../contexts/BrandingContext";
 import { 
   ShieldCheck, 
   Mail, 
@@ -28,6 +29,8 @@ interface PublisherAuthProps {
 }
 
 export function PublisherAuth({ currentView, setView, onLoginSuccess }: PublisherAuthProps) {
+  const branding = useBranding();
+
   // Login form states
   const [loginEmail, setLoginEmail] = useState("demo@apextrack.net");
   const [loginPassword, setLoginPassword] = useState("password123");
@@ -216,22 +219,35 @@ try {
   };
 
   return (
-    <div className="min-h-screen theme-bg-page flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 selection:bg-cyan-500 selection:text-slate-950 transition-colors duration-150" id="auth-root">
+    <div
+      className="min-h-screen theme-bg-page flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 selection:bg-cyan-500 selection:text-slate-950 transition-colors duration-150"
+      id="auth-root"
+      style={branding.loginBgUrl ? {
+        backgroundImage: `url(${branding.loginBgUrl})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      } : undefined}
+    >
       
       {/* Brand Header */}
       <div className="sm:mx-auto sm:w-full sm:max-w-xl text-center mb-6">
         <div className="flex items-center justify-center gap-2 mb-2 select-none">
           <div className="bg-cyan-500 text-slate-950 p-2.5 rounded-xl font-black shadow-lg shadow-cyan-500/20">
-            <Layers className="w-6 h-6 animate-pulse" />
+            {branding.logoUrl ? (
+              <img src={branding.logoUrl} alt={branding.networkName} className="w-6 h-6 object-contain" />
+            ) : (
+              <Layers className="w-6 h-6 animate-pulse" />
+            )}
           </div>
           <span className="text-xl font-black theme-text-main font-mono tracking-tight uppercase">
-            Apex<span className="text-cyan-500 dark:text-cyan-400">Track</span>
+            {branding.networkName}
           </span>
         </div>
         
         <h2 className="text-3xl font-black theme-text-main tracking-tight">
           {currentView === "login" && "Affiliate Portal Sign In"}
-          {currentView === "register" && "OGAds-Class Affiliate Application Entry"}
+          {currentView === "register" && "Affiliate Application"}
           {currentView === "forgot" && "Recover Security Access Token"}
           {currentView === "verify" && "Assert Identity Security Key"}
         </h2>
@@ -873,7 +889,7 @@ try {
                   onClick={() => { setErrorMessage(""); setSuccessMessage(""); setView("register"); setRegisterStep(1); }}
                   className="text-cyan-600 dark:text-cyan-400 hover:underline font-bold cursor-pointer"
                 >
-                  Become a Verified OGAds-Class Publisher (5 Steps)
+                  Apply to Become a Publisher
                 </button>
               </div>
             )}

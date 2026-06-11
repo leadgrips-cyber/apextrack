@@ -41,6 +41,52 @@ export async function insertTrackingLink(publisherId: string, payload: TrackingL
   return result.rows[0];
 }
 
+export async function findExistingTrackingLink(
+  publisherId: string,
+  payload: TrackingLinkCreatePayload
+): Promise<TrackingLinkRecord | null> {
+  const result = await query<TrackingLinkRecord>(
+    `SELECT * FROM tracking_links
+     WHERE publisher_id = $1
+       AND offer_id = $2
+       AND COALESCE(sub1, '') = COALESCE($3, '')
+       AND COALESCE(sub2, '') = COALESCE($4, '')
+       AND COALESCE(sub3, '') = COALESCE($5, '')
+       AND COALESCE(sub4, '') = COALESCE($6, '')
+       AND COALESCE(sub5, '') = COALESCE($7, '')
+     LIMIT 1`,
+    [
+      publisherId,
+      payload.offer_id,
+      payload.sub1 || null,
+      payload.sub2 || null,
+      payload.sub3 || null,
+      payload.sub4 || null,
+      payload.sub5 || null,
+    ]
+  );
+  return result.rows[0] || null;
+}
+
+export async function upsertTrackingLink(
+  publisherId: string,
+  payload: TrackingLinkCreatePayload,
+  trackingUrl: string
+): Promise<TrackingLinkRecord> {
+  const existing = await findExistingTrackingLink(publisherId, payload);
+  if (existing) return existing;
+
+  try {
+    return await insertTrackingLink(publisherId, payload, trackingUrl);
+  } catch (err: any) {
+    if (err.code === '23505') {
+      const race = await findExistingTrackingLink(publisherId, payload);
+      if (race) return race;
+    }
+    throw err;
+  }
+}
+
 export async function findTrackingLinksByPublisher(publisherId: string): Promise<TrackingLinkRecord[]> {
   const result = await query<TrackingLinkRecord>(
     `SELECT * FROM tracking_links WHERE publisher_id = $1 ORDER BY created_at DESC LIMIT 200`,

@@ -1,4 +1,22 @@
-import { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { createAffiliate, getManagers, ManagerRecord } from "../../services/publishers";
+
+const COUNTRY_TO_ISO: Record<string, string> = {
+  "United States": "US",
+  "Canada": "CA",
+  "United Kingdom": "GB",
+  "Brazil": "BR",
+  "India": "IN",
+  "Spain": "ES",
+  "Poland": "PL",
+  "Australia": "AU",
+};
+
+const STATUS_MAP: Record<StatusOption, "PENDING" | "ACTIVE" | "SUSPENDED"> = {
+  Pending: "PENDING",
+  Active: "ACTIVE",
+  Disabled: "SUSPENDED",
+};
 
 const countryOptions = [
   "United States",
@@ -11,7 +29,6 @@ const countryOptions = [
   "Australia",
 ];
 
-const managerOptions = ["Evan Chen", "Sofia Becker", "Talia Ortiz", "Jia Liu", "Marcus Bell"];
 const trackingDomains = ["track.apextrack.com", "go.affilinet.com", "secure.clickhub.io", "trk.trafficflow.net"];
 const trafficSources = ["Facebook", "Google Ads", "Native Push", "Email", "Taboola", "Custom DSP"];
 const statusOptions = ["Pending", "Active", "Disabled"] as const;
@@ -35,7 +52,11 @@ type FieldState = {
   postbackUrl: string;
 };
 
-export function AffiliateCreateView() {
+interface AffiliateCreateViewProps {
+  onSuccess?: () => void;
+}
+
+export function AffiliateCreateView({ onSuccess }: AffiliateCreateViewProps) {
   const [fields, setFields] = useState<FieldState>({
     firstName: "",
     lastName: "",
@@ -70,6 +91,14 @@ export function AffiliateCreateView() {
     postbackUrl: false,
   });
 
+  const [managers, setManagers] = useState<ManagerRecord[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getManagers().then(setManagers).catch(() => {});
+  }, []);
+
   const sampleAffiliateId = useMemo(() => {
     const id = Math.floor(1000 + Math.random() * 8999);
     return `APX-${id}`;
@@ -87,7 +116,6 @@ export function AffiliateCreateView() {
     confirmPasswordValid &&
     fields.country !== "" &&
     fields.status !== "" &&
-    fields.manager !== "" &&
     fields.domain !== "" &&
     fields.trafficSource !== "" &&
     postbackValid;
@@ -110,10 +138,12 @@ export function AffiliateCreateView() {
       country: "",
       telegramId: "",
       skypeId: "",
+      whatsapp: "",
       status: "Pending",
       manager: "",
       domain: trackingDomains[0],
       trafficSource: trafficSources[0],
+      postbackUrl: "",
     });
     setTouched({
       firstName: false,
@@ -124,11 +154,41 @@ export function AffiliateCreateView() {
       country: false,
       telegramId: false,
       skypeId: false,
+      whatsapp: false,
       status: false,
       manager: false,
       domain: false,
       trafficSource: false,
+      postbackUrl: false,
     });
+    setSubmitError(null);
+  };
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      await createAffiliate({
+        first_name: fields.firstName.trim(),
+        last_name: fields.lastName.trim(),
+        email: fields.email.trim().toLowerCase(),
+        password: fields.password,
+        country_code: COUNTRY_TO_ISO[fields.country] ?? fields.country,
+        status: STATUS_MAP[fields.status],
+        assigned_manager_id: fields.manager || null,
+        telegram: fields.telegramId.trim() || null,
+        skype: fields.skypeId.trim() || null,
+        whatsapp: fields.whatsapp.trim() || null,
+        tracking_domain: fields.domain || null,
+        traffic_source: fields.trafficSource || null,
+        postback_url: fields.postbackUrl.trim() || null,
+      });
+      onSuccess?.();
+    } catch (err: any) {
+      setSubmitError(err.message || "Failed to create affiliate");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const inputClass = (isError: boolean) =>
@@ -403,18 +463,15 @@ export function AffiliateCreateView() {
                   value={fields.manager}
                   onChange={handleChange("manager")}
                   onBlur={handleBlur("manager")}
-                  className={inputClass(touched.manager && fields.manager === "")}
+                  className={inputClass(false)}
                 >
-                  <option value="">Select manager</option>
-                  {managerOptions.map((manager) => (
-                    <option key={manager} value={manager}>
-                      {manager}
+                  <option value="">No manager assigned</option>
+                  {managers.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.full_name}
                     </option>
                   ))}
                 </select>
-                {touched.manager && fields.manager === "" && (
-                  <p className="text-rose-600 text-xs">A manager assignment is required.</p>
-                )}
               </label>
             </div>
           </section>
@@ -423,25 +480,32 @@ export function AffiliateCreateView() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <div className="text-xs uppercase tracking-[0.24em] font-bold theme-text-muted">Actions</div>
-                <p className="mt-2 text-sm theme-text-muted">This form is UI-only and does not send data to a server.</p>
               </div>
             </div>
+
+            {submitError && (
+              <p className="mt-4 rounded-2xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700">
+                {submitError}
+              </p>
+            )}
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <button
                 type="button"
-                disabled={!requiredFieldsValid}
+                disabled={!requiredFieldsValid || isSubmitting}
+                onClick={handleSubmit}
                 className={`inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition ${
-                  requiredFieldsValid
+                  requiredFieldsValid && !isSubmitting
                     ? "bg-cyan-600 text-white hover:bg-cyan-500"
                     : "bg-slate-200 text-slate-500 cursor-not-allowed"
                 }`}
               >
-                Create Affiliate
+                {isSubmitting ? "Creating..." : "Create Affiliate"}
               </button>
               <button
                 type="button"
                 onClick={resetForm}
+                disabled={isSubmitting}
                 className="inline-flex items-center justify-center rounded-full border theme-border bg-white px-6 py-3 text-sm font-semibold theme-text-secondary hover:bg-slate-100 transition"
               >
                 Reset

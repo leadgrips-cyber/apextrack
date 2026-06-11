@@ -1,5 +1,6 @@
 import { X, Printer, CheckCircle, Layers } from "lucide-react";
 import { DemoInvoice } from "../data/publisherDemo";
+import { useBranding } from "../contexts/BrandingContext";
 
 interface InvoiceDetailModalProps {
   invoice: DemoInvoice | null;
@@ -7,6 +8,7 @@ interface InvoiceDetailModalProps {
 }
 
 export function InvoiceDetailModal({ invoice, onClose }: InvoiceDetailModalProps) {
+  const branding = useBranding();
   if (!invoice) return null;
 
   // Dynamically generate realistic printable itemized rows depending on invoice properties
@@ -175,7 +177,7 @@ export function InvoiceDetailModal({ invoice, onClose }: InvoiceDetailModalProps
         <div className="bg-slate-950/80 p-4 border-t border-slate-850 flex justify-between items-center shrink-0">
           <span className="text-[10px] text-slate-550 font-mono flex items-center gap-1">
             <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-            Double-checked by ApexTrack Internal Accounting Compliance Division
+            Double-checked by {branding.networkName} Internal Accounting Compliance Division
           </span>
           <button
             onClick={onClose}

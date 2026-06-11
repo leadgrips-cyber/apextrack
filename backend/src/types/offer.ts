@@ -21,6 +21,8 @@ export interface OfferRecord {
   default_affiliate_commission: number;
   tracking_protocol: TrackingProtocol;
   admin_notes?: string | null;
+  advertiser_id?: string | null;
+  advertiser_name?: string | null;
   created_by_admin_id?: string | null;
   created_at: string;
   updated_at: string;
@@ -45,6 +47,7 @@ export interface OfferCreatePayload {
   default_affiliate_commission?: number;
   tracking_protocol?: TrackingProtocol;
   admin_notes?: string;
+  advertiser_id?: string | null;
 }
 
 export interface OfferUpdatePayload {
@@ -66,6 +69,7 @@ export interface OfferUpdatePayload {
   default_affiliate_commission?: number;
   tracking_protocol?: TrackingProtocol;
   admin_notes?: string;
+  advertiser_id?: string | null;
 }
 
 export interface OfferFilterParams {
@@ -75,4 +79,5 @@ export interface OfferFilterParams {
   device?: string;
   requires_publisher_approval?: boolean;
   search?: string;
+  advertiser_id?: string;
 }

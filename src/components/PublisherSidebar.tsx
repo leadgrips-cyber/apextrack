@@ -1,3 +1,4 @@
+import { useBranding } from "../contexts/BrandingContext";
 import {
   LayoutGrid,
   Globe,
@@ -28,7 +29,8 @@ interface PublisherSidebarProps {
 }
 
 export function PublisherSidebar({ activeScreen, setActiveScreen, onLogout, publisherName, unreadNotificationsCount = 0 }: PublisherSidebarProps) {
-  
+  const branding = useBranding();
+
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutGrid, premium: false },
     { id: "marketplace", label: "All Offers", icon: Globe, premium: false },
@@ -51,11 +53,15 @@ export function PublisherSidebar({ activeScreen, setActiveScreen, onLogout, publ
       <div className="p-5 border-b theme-border flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="bg-cyan-500 text-slate-950 p-2 rounded-lg font-black shadow-md shadow-cyan-500/10 shrink-0">
-            <Layers className="w-4 h-4" />
+            {branding.logoUrl ? (
+              <img src={branding.logoUrl} alt={branding.networkName} className="w-4 h-4 object-contain" />
+            ) : (
+              <Layers className="w-4 h-4" />
+            )}
           </div>
           <div className="flex flex-col">
             <span className="text-sm font-black theme-text-main font-mono tracking-tight uppercase leading-none">
-              Apex<span className="text-cyan-600 dark:text-cyan-400">Track</span>
+              {branding.networkName}
             </span>
             <span className="text-[9px] theme-text-muted font-mono tracking-widest pt-0.5 uppercase">
               Publisher Hub

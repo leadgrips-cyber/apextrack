@@ -91,6 +91,7 @@ export async function createOffer(payload: OfferCreatePayload, adminId: string) 
     default_affiliate_commission: payload.default_affiliate_commission ?? 0,
     tracking_protocol: normalizeTrackingProtocol(payload.tracking_protocol),
     admin_notes: payload.admin_notes?.trim() || undefined,
+    advertiser_id: payload.advertiser_id || null,
   };
 
   return await offerRepository.insertOffer({
@@ -120,6 +121,7 @@ export async function updateOffer(offerId: number, payload: OfferUpdatePayload) 
   if (payload.default_affiliate_commission !== undefined) updates.default_affiliate_commission = payload.default_affiliate_commission;
   if (payload.tracking_protocol !== undefined) updates.tracking_protocol = normalizeTrackingProtocol(payload.tracking_protocol);
   if (payload.admin_notes !== undefined) updates.admin_notes = payload.admin_notes?.trim() || undefined;
+  if (payload.advertiser_id !== undefined) updates.advertiser_id = payload.advertiser_id || null;
 
   const updated = await offerRepository.updateOfferById(offerId, updates);
   if (!updated) {

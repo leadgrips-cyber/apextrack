@@ -11,6 +11,25 @@ CREATE TYPE conversion_status AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'DISPU
 CREATE TYPE wallet_transaction_type AS ENUM ('CREDIT', 'DEBIT', 'HOLD', 'RELEASE', 'WITHDRAWAL', 'REFUND', 'ADJUSTMENT');
 CREATE TYPE postback_status AS ENUM ('QUEUED', 'SENT', 'SUCCESS', 'FAILED', 'RETRY', 'DISABLED');
 CREATE TYPE admin_role AS ENUM ('SUPER_ADMIN', 'AFFILIATE_MANAGER', 'FINANCE', 'SUPPORT', 'TECHNICAL');
+CREATE TYPE advertiser_status AS ENUM ('ACTIVE', 'PAUSED', 'SUSPENDED', 'PENDING');
+
+-- Advertisers — internal accounts that own offers. NEVER exposed to publishers.
+CREATE TABLE advertisers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_name VARCHAR(255) NOT NULL,
+  contact_name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  phone VARCHAR(64),
+  website VARCHAR(512),
+  status advertiser_status NOT NULL DEFAULT 'ACTIVE',
+  notes TEXT,
+  created_by_admin_id UUID NULL,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_advertisers_status ON advertisers(status);
+CREATE INDEX idx_advertisers_email ON advertisers(email);
 
 -- Admin users for operations and approvals.
 CREATE TABLE admins (
@@ -77,6 +96,7 @@ CREATE TABLE offers (
   traffic_rules JSONB,
   tracking_protocol VARCHAR(24) NOT NULL DEFAULT 'S2S' CHECK (tracking_protocol IN ('S2S', 'COOKIE', 'PIXEL', 'SERVER')),
   admin_notes TEXT,
+  advertiser_id UUID NULL REFERENCES advertisers(id) ON DELETE SET NULL,
   default_affiliate_commission NUMERIC(18,6) NOT NULL DEFAULT 0.000000,
   created_by_admin_id UUID NULL REFERENCES admins(id) ON DELETE SET NULL,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -84,6 +104,7 @@ CREATE TABLE offers (
 );
 
 CREATE INDEX idx_offers_status ON offers(status);
+CREATE INDEX idx_offers_advertiser_id ON offers(advertiser_id);
 CREATE INDEX idx_offers_payout_type ON offers(payout_type);
 CREATE INDEX idx_offers_geos ON offers USING gin(target_geos);
 CREATE INDEX idx_offers_devices ON offers USING gin(target_devices);
@@ -319,6 +340,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE TRIGGER advertisers_updated_at BEFORE UPDATE ON advertisers FOR EACH ROW EXECUTE FUNCTION update_timestamp();
 CREATE TRIGGER publishers_updated_at BEFORE UPDATE ON publishers FOR EACH ROW EXECUTE FUNCTION update_timestamp();
 CREATE TRIGGER admins_updated_at BEFORE UPDATE ON admins FOR EACH ROW EXECUTE FUNCTION update_timestamp();
 CREATE TRIGGER offers_updated_at BEFORE UPDATE ON offers FOR EACH ROW EXECUTE FUNCTION update_timestamp();

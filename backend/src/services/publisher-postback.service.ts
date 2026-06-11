@@ -1,4 +1,5 @@
 import * as publisherPostbackRepository from "../repositories/publisher-postback.repository.js";
+import * as postbackRepository from "../repositories/postback.repository.js";
 import { PublisherPostbackCreatePayload, PublisherPostbackRecord, PublisherPostbackUpdatePayload } from "../types/publisherPostback.js";
 import { ConversionRecord } from "../types/postback.js";
 import { ClickRecord } from "../types/click.js";
@@ -94,45 +95,31 @@ export async function getPublisherPostback(
   return postback;
 }
 
-export async function processPublisherPostbacksForConversion(
+export async function enqueuePublisherPostbacks(
   click: PublisherClickContext,
   conversion: ConversionRecord,
   status: string
-) {
+): Promise<void> {
   const postbacks = await publisherPostbackRepository.findActivePostbacksForConversion(
     click.offer_id,
     click.publisher_id
   );
 
+  if (postbacks.length === 0) return;
+
   const variables = buildPostbackVariables(click, conversion, status);
 
-  await Promise.all(
-    postbacks.map(async (postback) => {
-      const requestUrl = replaceTokens(postback.callback_url, variables);
-      let responseCode: number | null = null;
-      let responseBody: string | null = null;
-      let logStatus = 'FAILED';
-
-      try {
-        const response = await fetch(requestUrl, { method: 'GET' });
-        responseCode = response.status;
-        responseBody = await response.text();
-        logStatus = response.ok ? 'SUCCESS' : 'FAILED';
-      } catch (error) {
-        responseBody = String(error instanceof Error ? error.message : error);
-      }
-
-      await publisherPostbackRepository.savePublisherPostbackLog({
-        publisher_postback_id: postback.id,
-        conversion_id: conversion.id,
-        click_id: click.click_id,
-        offer_id: click.offer_id,
-        publisher_id: click.publisher_id,
-        request_url: requestUrl,
-        response_code: responseCode,
-        response_body: responseBody,
-        status: logStatus,
-      });
-    })
-  );
+  for (const postback of postbacks) {
+    const resolvedUrl = replaceTokens(postback.callback_url, variables);
+    await postbackRepository.insertPostbackQueueEntry({
+      conversion_id: conversion.id,
+      offer_id: click.offer_id,
+      publisher_id: click.publisher_id,
+      publisher_postback_id: postback.id,
+      click_id: click.click_id,
+      destination_url: resolvedUrl,
+      http_method: 'GET',
+      payload: variables,
+    });
+  }
 }

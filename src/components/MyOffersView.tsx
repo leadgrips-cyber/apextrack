@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { CheckCircle, Globe, Link, ArrowUpRight, HelpCircle, AlertTriangle, ShieldCheck } from "lucide-react";
+import { useBranding } from "../contexts/BrandingContext";
 
 interface MyOffersViewProps {
   setSelectedOfferId: (id: string | null) => void;
@@ -7,7 +8,8 @@ interface MyOffersViewProps {
 }
 
 export function MyOffersView({ setSelectedOfferId, offers }: MyOffersViewProps) {
-  
+  const branding = useBranding();
+
   // Filter offers that are approved or open access and ready to generate clicks (status: active/open_access/approved)
   const approvedOffers = useMemo(() => {
     return offers.filter(o => o.status === "open_access" || o.status === "approved");
@@ -103,7 +105,7 @@ export function MyOffersView({ setSelectedOfferId, offers }: MyOffersViewProps) 
           </div>
           <div className="bg-slate-950 p-3 rounded-xl border border-slate-850">
             <span className="block font-bold text-slate-300 text-xs pb-1">2. Traffic Inspection Logs</span>
-            ApexTrack reserves execution capabilities to run random checks on traffic referrals, verifying quality constraints, device fingerprints, and geolocation ranges to eliminate click injection triggers.
+            {branding.networkName} reserves execution capabilities to run random checks on traffic referrals, verifying quality constraints, device fingerprints, and geolocation ranges to eliminate click injection triggers.
           </div>
         </div>
       </div>

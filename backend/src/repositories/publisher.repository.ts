@@ -13,6 +13,7 @@ export interface PublisherAdminRecord {
   account_status: string;
   approval_status: string;
   assigned_manager_id?: string | null;
+  manager_name?: string | null;
   affiliate_code: string;
   is_active: boolean;
   currency: string;
@@ -24,6 +25,13 @@ export interface PublisherAdminRecord {
   total_conversions: number;
   total_revenue: string;
   total_payout: string;
+}
+
+export interface ManagerRecord {
+  id: string;
+  full_name: string;
+  email: string;
+  role: string;
 }
 
 export interface PublisherWalletRecord {
@@ -101,6 +109,7 @@ export async function findPublishers(filters: PublisherListFilters) {
        p.account_status,
        p.approval_status,
        p.assigned_manager_id,
+       mgr.full_name AS manager_name,
        p.affiliate_code,
        p.is_active,
        p.currency,
@@ -113,6 +122,7 @@ export async function findPublishers(filters: PublisherListFilters) {
        COALESCE(conv_stats.total_revenue, 0) AS total_revenue,
        COALESCE(conv_stats.total_payout, 0) AS total_payout
      FROM publishers p
+     LEFT JOIN admins mgr ON mgr.id = p.assigned_manager_id
      LEFT JOIN (
        SELECT publisher_id, COUNT(*) AS total_clicks FROM clicks GROUP BY publisher_id
      ) click_stats ON click_stats.publisher_id = p.id
@@ -152,6 +162,7 @@ export async function findPublisherById(publisherId: string): Promise<PublisherA
        p.account_status,
        p.approval_status,
        p.assigned_manager_id,
+       mgr.full_name AS manager_name,
        p.affiliate_code,
        p.is_active,
        p.currency,
@@ -164,6 +175,7 @@ export async function findPublisherById(publisherId: string): Promise<PublisherA
        COALESCE(conv_stats.total_revenue, 0) AS total_revenue,
        COALESCE(conv_stats.total_payout, 0) AS total_payout
      FROM publishers p
+     LEFT JOIN admins mgr ON mgr.id = p.assigned_manager_id
      LEFT JOIN (
        SELECT publisher_id, COUNT(*) AS total_clicks FROM clicks GROUP BY publisher_id
      ) click_stats ON click_stats.publisher_id = p.id
@@ -191,6 +203,7 @@ export async function updatePublisherStatus(
     is_active?: boolean;
     approved_at?: string | null;
     rejected_reason?: string | null;
+    assigned_manager_id?: string | null;
   }
 ): Promise<PublisherAdminRecord | null> {
   const fields: string[] = [];
@@ -215,6 +228,10 @@ export async function updatePublisherStatus(
   if (updates.rejected_reason !== undefined) {
     fields.push(`rejected_reason = $${values.length + 1}`);
     values.push(updates.rejected_reason);
+  }
+  if (updates.assigned_manager_id !== undefined) {
+    fields.push(`assigned_manager_id = $${values.length + 1}`);
+    values.push(updates.assigned_manager_id);
   }
 
   if (fields.length === 0) {
@@ -264,4 +281,90 @@ export async function findPublisherTrackingLinksByPublisher(publisherId: string)
     [publisherId]
   );
   return result.rows;
+}
+
+export async function findManagersForAssignment(): Promise<ManagerRecord[]> {
+  const result = await query<ManagerRecord>(
+    `SELECT id, full_name, email, role
+     FROM admins
+     WHERE is_active = TRUE
+     ORDER BY full_name ASC`,
+    []
+  );
+  return result.rows;
+}
+
+export async function findAdminById(adminId: string): Promise<ManagerRecord | null> {
+  const result = await query<ManagerRecord>(
+    `SELECT id, full_name, email, role FROM admins WHERE id = $1 AND is_active = TRUE LIMIT 1`,
+    [adminId]
+  );
+  return result.rows[0] || null;
+}
+
+export interface AdminCreatePublisherPayload {
+  first_name: string;
+  last_name: string;
+  email: string;
+  password_hash: string;
+  country_code: string;
+  account_status: 'PENDING' | 'ACTIVE' | 'SUSPENDED';
+  approval_status: string;
+  is_active: boolean;
+  assigned_manager_id: string | null;
+  telegram: string | null;
+  skype: string | null;
+  whatsapp: string | null;
+  tracking_domain: string | null;
+  traffic_source: string | null;
+  postback_url: string | null;
+}
+
+export async function insertPublisherByAdmin(payload: AdminCreatePublisherPayload): Promise<PublisherAdminRecord> {
+  const loginName = payload.email.split('@')[0];
+  const affiliateCode = `AFF-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  const fullName = `${payload.first_name} ${payload.last_name}`.trim();
+
+  const profileMetadata = {
+    telegram: payload.telegram,
+    skype: payload.skype,
+    whatsapp: payload.whatsapp,
+    tracking_domain: payload.tracking_domain,
+    traffic_source: payload.traffic_source,
+    postback_url: payload.postback_url,
+  };
+
+  const result = await query<PublisherAdminRecord>(
+    `INSERT INTO publishers (
+       email, login_name, full_name, country_code, affiliate_code,
+       password_hash, account_status, approval_status, is_active,
+       assigned_manager_id, profile_metadata, created_at, updated_at
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+     RETURNING id, email, login_name, full_name, company_name, country_code, timezone,
+               account_status, approval_status, assigned_manager_id, affiliate_code,
+               is_active, currency, created_at, updated_at, approved_at, rejected_reason`,
+    [
+      payload.email,
+      loginName,
+      fullName,
+      payload.country_code,
+      affiliateCode,
+      payload.password_hash,
+      payload.account_status,
+      payload.approval_status,
+      payload.is_active,
+      payload.assigned_manager_id,
+      profileMetadata,
+    ]
+  );
+
+  const row = result.rows[0];
+  return {
+    ...row,
+    manager_name: null,
+    total_clicks: 0,
+    total_conversions: 0,
+    total_revenue: '0',
+    total_payout: '0',
+  };
 }

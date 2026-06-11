@@ -54,15 +54,23 @@ export interface WalletTransactionRecord {
   updated_at: string;
 }
 
-export interface PostbackLogRecord {
+export interface PostbackQueueRecord {
   id: string;
   conversion_id: string;
-  click_id: string;
   offer_id: number;
   publisher_id: string;
-  payload: Record<string, unknown>;
-  status: string;
+  publisher_postback_id: string | null;
+  click_id: string | null;
+  destination_url: string;
+  payload: Record<string, string>;
+  status: 'QUEUED' | 'SENT' | 'SUCCESS' | 'FAILED' | 'RETRY' | 'DISABLED';
   attempt_count: number;
+  last_attempt_at: string | null;
+  next_retry_at: string | null;
+  last_response_code: number | null;
+  last_response_body: string | null;
+  http_method: string;
+  headers: Record<string, string> | null;
   created_at: string;
   updated_at: string;
 }

@@ -9,7 +9,14 @@ import {
   pauseOffer,
   updateOffer,
 } from "../services/offer.service.js";
-import { OfferCreatePayload, OfferFilterParams, OfferUpdatePayload, OfferStatus } from "../types/offer.js";
+import { OfferCreatePayload, OfferFilterParams, OfferRecord, OfferUpdatePayload, OfferStatus } from "../types/offer.js";
+
+// Strip advertiser and internal fields before returning data to publisher role.
+// Publishers must never see advertiser_id, advertiser_name, admin_notes, or created_by_admin_id.
+function toPublisherOffer(offer: OfferRecord): Omit<OfferRecord, 'advertiser_id' | 'advertiser_name' | 'admin_notes' | 'created_by_admin_id'> {
+  const { advertiser_id, advertiser_name, admin_notes, created_by_admin_id, ...safe } = offer;
+  return safe;
+}
 
 function parseBooleanQuery(value: unknown): boolean | undefined {
   if (value === undefined || value === null) return undefined;
@@ -100,7 +107,12 @@ export async function handleGetOfferDetails(req: AuthRequest, res: Response, nex
     }
 
     const offer = await getOfferDetails(offerId);
-    res.json({ offer });
+    const isPublisher = req.user?.role === 'publisher';
+    if (isPublisher && offer.status !== 'ACTIVE') {
+      res.status(404).json({ message: 'Offer not found' });
+      return;
+    }
+    res.json({ offer: isPublisher ? toPublisherOffer(offer) : offer });
   } catch (error) {
     next(error);
   }
@@ -108,17 +120,23 @@ export async function handleGetOfferDetails(req: AuthRequest, res: Response, nex
 
 export async function handleListOffers(req: AuthRequest, res: Response, next: NextFunction) {
   try {
+    const isPublisher = req.user?.role === 'publisher';
+
     const filters: OfferFilterParams = {
-      status: req.query.status as OfferStatus | undefined,
+      // Publishers are locked to ACTIVE — they must never receive DRAFT, PAUSED, ARCHIVED, CLOSED, or EXHAUSTED offers
+      status: isPublisher ? 'ACTIVE' : (req.query.status as OfferStatus | undefined),
       category: req.query.category as string | undefined,
       geo: req.query.geo as string | undefined,
       device: req.query.device as string | undefined,
-      requires_publisher_approval: parseBooleanQuery(req.query.requires_publisher_approval),
+      requires_publisher_approval: isPublisher ? undefined : parseBooleanQuery(req.query.requires_publisher_approval),
       search: req.query.search as string | undefined,
+      // Publishers cannot filter by advertiser — omit even if they try to pass it
+      advertiser_id: isPublisher ? undefined : req.query.advertiser_id as string | undefined,
     };
 
     const offers = await listOffers(filters);
-    res.json({ offers });
+    const responseOffers = isPublisher ? offers.map(toPublisherOffer) : offers;
+    res.json({ offers: responseOffers });
   } catch (error) {
     next(error);
   }

@@ -5,6 +5,7 @@ import router from "./routes/index.js";
 import validateEnvironment from "./config/environment.js";
 import { requestLoggingMiddleware, requestIdMiddleware } from "./middlewares/logging.middleware.js";
 import { securityHeadersMiddleware, requestSizeLimitMiddleware, rateLimitingStatusMiddleware } from "./middlewares/security.middleware.js";
+import { startPostbackWorker } from "./workers/postback-worker.js";
 
 const app = express();
 validateEnvironment();
@@ -33,4 +34,5 @@ app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
 const port = Number(process.env.PORT) || 3000;
 app.listen(port, () => {
   console.log(`ApexTrack backend listening on http://localhost:${port}`);
+  startPostbackWorker();
 });

@@ -336,7 +336,7 @@ export function ReportsView() {
       id: 5,
       type: "announcement",
       title: "System Announcement",
-      text: "ApexTrack Network Upgrade: S2S Click Attribution and POSTBACK ping speeds have been improved to < 12ms.",
+      text: "Network Upgrade: S2S Click Attribution and POSTBACK ping speeds have been improved to < 12ms.",
       time: "2 days ago"
     }
   ]);

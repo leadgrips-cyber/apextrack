@@ -3,7 +3,10 @@ import { OfferCreatePayload, OfferFilterParams, OfferRecord, OfferUpdatePayload 
 
 export async function findOfferById(offerId: number): Promise<OfferRecord | null> {
   const result = await query<OfferRecord>(
-    'SELECT * FROM offers WHERE id = $1 LIMIT 1',
+    `SELECT o.*, a.company_name AS advertiser_name
+     FROM offers o
+     LEFT JOIN advertisers a ON a.id = o.advertiser_id
+     WHERE o.id = $1 LIMIT 1`,
     [offerId]
   );
   return result.rows[0] || null;
@@ -15,38 +18,46 @@ export async function findOffers(filters: OfferFilterParams = {}): Promise<Offer
 
   if (filters.status) {
     values.push(filters.status);
-    clauses.push(`status = $${values.length}`);
+    clauses.push(`o.status = $${values.length}`);
   }
 
   if (filters.category) {
     values.push(filters.category);
-    clauses.push(`category ILIKE $${values.length}`);
+    clauses.push(`o.category ILIKE $${values.length}`);
   }
 
   if (filters.geo) {
     values.push(filters.geo.toUpperCase());
-    clauses.push(`target_geos @> ARRAY[$${values.length}]::TEXT[]`);
+    clauses.push(`o.target_geos @> ARRAY[$${values.length}]::TEXT[]`);
   }
 
   if (filters.device) {
     values.push(filters.device.toLowerCase());
-    clauses.push(`target_devices @> ARRAY[$${values.length}]::TEXT[]`);
+    clauses.push(`o.target_devices @> ARRAY[$${values.length}]::TEXT[]`);
   }
 
   if (typeof filters.requires_publisher_approval === 'boolean') {
     values.push(filters.requires_publisher_approval);
-    clauses.push(`requires_publisher_approval = $${values.length}`);
+    clauses.push(`o.requires_publisher_approval = $${values.length}`);
+  }
+
+  if (filters.advertiser_id) {
+    values.push(filters.advertiser_id);
+    clauses.push(`o.advertiser_id = $${values.length}`);
   }
 
   if (filters.search) {
     const searchTerm = `%${filters.search}%`;
     values.push(searchTerm, searchTerm, searchTerm, searchTerm);
-    clauses.push(`(name ILIKE $${values.length - 3} OR category ILIKE $${values.length - 2} OR slug ILIKE $${values.length - 1} OR landing_page_url ILIKE $${values.length})`);
+    clauses.push(`(o.name ILIKE $${values.length - 3} OR o.category ILIKE $${values.length - 2} OR o.slug ILIKE $${values.length - 1} OR o.landing_page_url ILIKE $${values.length})`);
   }
 
   const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
   const result = await query<OfferRecord>(
-    `SELECT * FROM offers ${whereClause} ORDER BY created_at DESC LIMIT 200`,
+    `SELECT o.*, a.company_name AS advertiser_name
+     FROM offers o
+     LEFT JOIN advertisers a ON a.id = o.advertiser_id
+     ${whereClause} ORDER BY o.created_at DESC LIMIT 200`,
     values
   );
 
@@ -74,11 +85,12 @@ export async function insertOffer(payload: OfferCreatePayload & { created_by_adm
        default_affiliate_commission,
        tracking_protocol,
        admin_notes,
+       advertiser_id,
        created_by_admin_id,
        created_at,
        updated_at
      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,NOW(),NOW())
-     RETURNING *`,
+     RETURNING id`,
     [
       payload.name,
       payload.slug,
@@ -98,10 +110,13 @@ export async function insertOffer(payload: OfferCreatePayload & { created_by_adm
       payload.default_affiliate_commission ?? 0,
       payload.tracking_protocol || 'S2S',
       payload.admin_notes || null,
+      payload.advertiser_id || null,
       payload.created_by_admin_id,
     ]
   );
-  return result.rows[0];
+  const inserted = await findOfferById(result.rows[0].id);
+  if (!inserted) throw new Error('Failed to retrieve offer after insert');
+  return inserted;
 }
 
 export async function updateOfferById(offerId: number, updates: OfferUpdatePayload): Promise<OfferRecord | null> {
@@ -131,26 +146,27 @@ export async function updateOfferById(offerId: number, updates: OfferUpdatePaylo
   if (updates.default_affiliate_commission !== undefined) addField('default_affiliate_commission', updates.default_affiliate_commission);
   if (updates.tracking_protocol !== undefined) addField('tracking_protocol', updates.tracking_protocol);
   if (updates.admin_notes !== undefined) addField('admin_notes', updates.admin_notes);
+  if (updates.advertiser_id !== undefined) addField('advertiser_id', updates.advertiser_id || null);
 
   if (fields.length === 0) {
     return findOfferById(offerId);
   }
 
   values.push(offerId);
-  const result = await query<OfferRecord>(
-    `UPDATE offers SET ${fields.join(', ')}, updated_at = NOW() WHERE id = $${values.length} RETURNING *`,
+  await query(
+    `UPDATE offers SET ${fields.join(', ')}, updated_at = NOW() WHERE id = $${values.length}`,
     values
   );
 
-  return result.rows[0] || null;
+  return findOfferById(offerId);
 }
 
 export async function updateOfferStatus(offerId: number, status: string): Promise<OfferRecord | null> {
-  const result = await query<OfferRecord>(
-    `UPDATE offers SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+  await query(
+    `UPDATE offers SET status = $1, updated_at = NOW() WHERE id = $2`,
     [status, offerId]
   );
-  return result.rows[0] || null;
+  return findOfferById(offerId);
 }
 
 export async function archiveOfferById(offerId: number): Promise<OfferRecord | null> {
