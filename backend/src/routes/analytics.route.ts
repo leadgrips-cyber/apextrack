@@ -17,6 +17,17 @@ import {
   handleGetWalletTransactions,
   handleProcessManualPayout,
 } from "../controllers/payouts.controller.js";
+import {
+  handleGetInvoicesSummary,
+  handleListInvoices,
+  handleGetInvoice,
+  handleCreateInvoice,
+  handleMarkInvoicePaid,
+  handleHoldInvoice,
+  handleUnholdInvoice,
+  handleUpdateInvoice,
+  handleDeleteInvoice,
+} from "../controllers/invoices.controller.js";
 
 const router = Router();
 
@@ -36,5 +47,15 @@ router.get('/finance/payouts/summary', handleGetPayoutsSummary);
 router.get('/finance/payouts/publishers', handleGetPublishersWithBalances);
 router.get('/finance/payouts/transactions', handleGetWalletTransactions);
 router.post('/finance/payouts/process', handleProcessManualPayout);
+
+router.get('/finance/invoices/summary',    handleGetInvoicesSummary);
+router.get('/finance/invoices',            handleListInvoices);
+router.get('/finance/invoices/:id',        handleGetInvoice);
+router.post('/finance/invoices',           handleCreateInvoice);
+router.post('/finance/invoices/:id/pay',   handleMarkInvoicePaid);
+router.post('/finance/invoices/:id/hold',   handleHoldInvoice);
+router.post('/finance/invoices/:id/unhold', handleUnholdInvoice);
+router.put('/finance/invoices/:id',         handleUpdateInvoice);
+router.delete('/finance/invoices/:id',      handleDeleteInvoice);
 
 export default router;
