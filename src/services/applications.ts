@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:3000/api";
+const API_URL = "/api";
 
 function authHeaders() {
   const token = localStorage.getItem("admin_token") || localStorage.getItem("token") || "";

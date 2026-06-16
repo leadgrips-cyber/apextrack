@@ -17,7 +17,7 @@ export function MyOffersView({ setSelectedOfferId }: MyOffersViewProps) {
       const token = localStorage.getItem("token");
       if (!token) { setApprovedOffers([]); setLoading(false); return; }
       try {
-        const res = await fetch("http://localhost:3000/api/publisher/me/approved-offers", {
+        const res = await fetch("/api/publisher/me/approved-offers", {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) { setApprovedOffers([]); setLoading(false); return; }

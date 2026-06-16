@@ -53,7 +53,7 @@ export function InvoicesView() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) { setLoading(false); setError("Not authenticated"); return; }
-    fetch("http://localhost:3000/api/publisher/me/invoices", {
+    fetch("/api/publisher/me/invoices", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(async (r) => {
@@ -117,7 +117,7 @@ ${inv.notes ? `Notes: ${inv.notes}` : ""}`;
           </p>
         </div>
         <button
-          onClick={() => { setLoading(true); setError(null); const token = localStorage.getItem("token"); if (!token) return; fetch("http://localhost:3000/api/publisher/me/invoices", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).then(d => setInvoices(d.invoices ?? [])).catch(e => setError(e.message)).finally(() => setLoading(false)); }}
+          onClick={() => { setLoading(true); setError(null); const token = localStorage.getItem("token"); if (!token) return; fetch("/api/publisher/me/invoices", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).then(d => setInvoices(d.invoices ?? [])).catch(e => setError(e.message)).finally(() => setLoading(false)); }}
           className="theme-bg-well border theme-border px-3 py-1.5 rounded-xl text-xs theme-text-secondary hover:text-cyan-600 flex items-center gap-1.5 transition"
         >
           <RefreshCw className="w-3.5 h-3.5" /> Refresh

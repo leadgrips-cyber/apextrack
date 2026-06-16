@@ -25,7 +25,7 @@ export function ApiAccessView() {
   useEffect(() => {
     const authToken = localStorage.getItem("token");
     if (!authToken) { setLoading(false); return; }
-    fetch("http://localhost:3000/api/publisher/me/api-token", {
+    fetch("/api/publisher/me/api-token", {
       headers: { Authorization: `Bearer ${authToken}` },
     })
       .then(async (r) => {
@@ -43,7 +43,7 @@ export function ApiAccessView() {
     const authToken = localStorage.getItem("token");
     if (!authToken) { setIsRegenerating(false); return; }
     try {
-      const r = await fetch("http://localhost:3000/api/publisher/me/api-token/regenerate", {
+      const r = await fetch("/api/publisher/me/api-token/regenerate", {
         method: "POST",
         headers: { Authorization: `Bearer ${authToken}` },
       });

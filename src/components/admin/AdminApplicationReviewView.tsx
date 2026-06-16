@@ -113,7 +113,7 @@ export function AdminApplicationReviewView() {
     setLoading(true);
     setFetchError(null);
 
-    fetch("http://localhost:3000/api/applications", { headers: authHeaders() })
+    fetch("/api/applications", { headers: authHeaders() })
       .then(r => {
         if (!r.ok) return r.json().then(d => { throw new Error(d.message || `Error ${r.status}`); });
         return r.json();
@@ -203,7 +203,7 @@ export function AdminApplicationReviewView() {
     setRowErrors(prev => { const n = { ...prev }; delete n[appId]; return n; });
 
     try {
-      const r = await fetch(`http://localhost:3000/api/applications/${appId}/approve`, {
+      const r = await fetch(`/api/applications/${appId}/approve`, {
         method: "PATCH",
         headers: authHeaders(),
       });
@@ -236,7 +236,7 @@ export function AdminApplicationReviewView() {
     setRejectError(null);
 
     try {
-      const r = await fetch(`http://localhost:3000/api/applications/${rejectApp.id}/reject`, {
+      const r = await fetch(`/api/applications/${rejectApp.id}/reject`, {
         method: "PATCH",
         headers: authHeaders(),
         body: JSON.stringify({ rejection_reason: rejectReason.trim() || "No reason provided." }),

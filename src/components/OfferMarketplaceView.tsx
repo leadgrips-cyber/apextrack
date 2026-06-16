@@ -361,10 +361,10 @@ export function OfferMarketplaceView({
 
       try {
         const [offersRes, appsRes] = await Promise.all([
-          fetch("http://localhost:3000/api/offers", {
+          fetch("/api/offers", {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          fetch("http://localhost:3000/api/applications/me", {
+          fetch("/api/applications/me", {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -562,7 +562,7 @@ export function OfferMarketplaceView({
     }
 
     try {
-      const response = await fetch("http://localhost:3000/api/applications", {
+      const response = await fetch("/api/applications", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({

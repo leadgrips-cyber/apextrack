@@ -94,7 +94,7 @@ export function OfferGeneralTab({ offer, advertisers, onSaved }: Props) {
       const fd = new FormData();
       fd.append("logo", file);
       const token = localStorage.getItem("admin_token") || localStorage.getItem("token") || "";
-      const res = await fetch("http://localhost:3000/api/upload/offer-logo", {
+      const res = await fetch("/api/upload/offer-logo", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: fd,

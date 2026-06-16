@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:3000/api";
+const API_URL = "/api";
 
 function authHeaders() {
   // Admin panel APIs require role="admin". Prefer admin_token (stored during

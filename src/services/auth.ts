@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:3000/api";
+const API_URL = "/api";
 
 export class EmailNotVerifiedError extends Error {
   readonly code = 'EMAIL_NOT_VERIFIED' as const;

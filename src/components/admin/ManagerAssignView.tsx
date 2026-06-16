@@ -13,7 +13,7 @@ interface Publisher {
   manager_name: string | null;
 }
 
-const API_URL = "http://localhost:3000/api";
+const API_URL = "/api";
 
 async function fetchPublishers(): Promise<Publisher[]> {
   const token = localStorage.getItem("admin_token") || "";

@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:3000/api";
+const API_URL = "/api";
 
 export async function verifyEmailToken(token: string): Promise<{
   status: 'verified' | 'already_verified' | 'expired' | 'invalid';

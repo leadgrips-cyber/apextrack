@@ -33,7 +33,7 @@ interface PublisherSidebarProps {
   publisherName: string;
 }
 
-const API_URL = "http://localhost:3000/api";
+const API_URL = "/api";
 
 export function PublisherSidebar({ activeScreen, setActiveScreen, onLogout, publisherName }: PublisherSidebarProps) {
   const branding = useBranding();
