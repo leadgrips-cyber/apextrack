@@ -1,4 +1,5 @@
 import * as payoutsRepository from "../repositories/payouts.repository.js";
+import * as notificationService from "./notifications.service.js";
 
 function formatCurrency(value: unknown): string {
   const n = Number(value);
@@ -88,9 +89,20 @@ export async function processManualPayout(params: {
     throw new Error('amount must be a positive number');
   }
 
-  return payoutsRepository.processManualPayout({
+  const result = await payoutsRepository.processManualPayout({
     publisherId: params.publisherId,
     amount:      params.amount,
     description: params.description || 'Manual payout processed by admin',
   });
+
+  try {
+    await notificationService.createNotification({
+      publisher_id: params.publisherId,
+      title: 'Payout Processed',
+      message: `Your payout of $${params.amount.toFixed(2)} has been processed successfully.`,
+      notification_type: 'payout',
+    });
+  } catch (_err) { /* notification failure must not interrupt payout */ }
+
+  return result;
 }

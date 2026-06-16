@@ -14,12 +14,17 @@ export interface OfferRecord {
   requires_publisher_approval: boolean;
   payout_type: string;
   payout_amount: number;
+  advertiser_payout: number;
+  affiliate_payout: number;
   currency: string;
   target_geos: string[];
   target_devices: string[];
   landing_page_url: string;
   preview_url?: string | null;
+  offer_logo_url?: string | null;
+  conversion_approval_mode?: string;
   terms?: string | null;
+  traffic_rules?: Record<string, unknown> | null;
   default_affiliate_commission: number;
   tracking_protocol: string;
   admin_notes?: string | null;
@@ -34,9 +39,13 @@ export interface OfferFormPayload {
   category: string;
   payout_type: string;
   payout_amount: number;
+  advertiser_payout?: number;
+  affiliate_payout?: number;
   currency: string;
   landing_page_url: string;
   preview_url?: string;
+  offer_logo_url?: string | null;
+  conversion_approval_mode?: string;
   target_geos?: string[];
   target_devices?: string[];
   status?: string;
@@ -45,6 +54,7 @@ export interface OfferFormPayload {
   tracking_protocol?: string;
   admin_notes?: string;
   terms?: string;
+  traffic_rules?: Record<string, unknown> | null;
   advertiser_id?: string | null;
 }
 

@@ -1,4 +1,5 @@
 import { LayoutGrid, Activity, BarChart3, CreditCard, Link2, LogOut } from "lucide-react";
+import { useBranding } from "../../contexts/BrandingContext";
 
 interface AdvertiserSidebarProps {
   activeSection: string;
@@ -15,6 +16,8 @@ const navItems = [
 ];
 
 export function AdvertiserSidebar({ activeSection, setActiveSection, onLogout }: AdvertiserSidebarProps) {
+  const branding = useBranding();
+
   return (
     <aside className="w-72 bg-white dark:bg-slate-950 border-r theme-border flex flex-col h-screen shrink-0 font-sans shadow-sm">
       <div className="p-6 border-b theme-border">
@@ -24,7 +27,7 @@ export function AdvertiserSidebar({ activeSection, setActiveSection, onLogout }:
           </div>
           <div>
             <div className="text-sm font-black uppercase tracking-[0.25em] theme-text-main">
-              ApexTrack
+              {branding.networkName}
             </div>
             <div className="text-[10px] theme-text-muted uppercase tracking-widest font-mono pt-0.5">
               Advertiser Hub

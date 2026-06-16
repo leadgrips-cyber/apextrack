@@ -1,22 +1,34 @@
 import { Router } from 'express';
 import { authenticateJwt } from "../middlewares/auth.middleware.js";
 import { authorizeRoles } from "../middlewares/rbac.middleware.js";
+import { validateTurnstile } from "../middlewares/turnstile.middleware.js";
 import {
+  handleAdvertiserSignup,
+  handleAdvertiserLogin,
+  handleGetAdvertiserCounts,
   handleListAdvertisers,
   handleGetAdvertiser,
   handleCreateAdvertiser,
   handleUpdateAdvertiser,
+  handleActivateAdvertiser,
+  handleDeactivateAdvertiser,
 } from "../controllers/advertiser.controller.js";
 
 const router = Router();
 
-// All advertiser endpoints are admin-only — publishers must never access this route.
-router.use(authenticateJwt);
-router.use(authorizeRoles('admin'));
+// ── Public routes (no auth) ───────────────────────────────────────────────────
+router.post('/signup', validateTurnstile, handleAdvertiserSignup);
+router.post('/login',  handleAdvertiserLogin);
 
-router.get('/', handleListAdvertisers);
-router.get('/:id', handleGetAdvertiser);
-router.post('/', handleCreateAdvertiser);
-router.put('/:id', handleUpdateAdvertiser);
+// ── Admin-only routes ─────────────────────────────────────────────────────────
+router.use(authenticateJwt, authorizeRoles('admin'));
+
+router.get('/counts',     handleGetAdvertiserCounts);
+router.get('/',           handleListAdvertisers);
+router.get('/:id',        handleGetAdvertiser);
+router.post('/',          handleCreateAdvertiser);
+router.put('/:id',        handleUpdateAdvertiser);
+router.post('/:id/activate',   handleActivateAdvertiser);
+router.post('/:id/deactivate', handleDeactivateAdvertiser);
 
 export default router;

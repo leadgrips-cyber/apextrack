@@ -9,6 +9,7 @@ function formatUserResponse(user: PublisherRecord | AdminRecord, role: string) {
     id: user.id,
     email: user.email,
     role,
+    adminRole: role === 'admin' && 'role' in user ? (user as AdminRecord).role : undefined,
     fullName: 'full_name' in user ? user.full_name : undefined,
     loginName: 'login_name' in user ? user.login_name : undefined,
     companyName: 'company_name' in user ? user.company_name : undefined,
@@ -34,7 +35,32 @@ export async function login(req: Request, res: Response, next: NextFunction) {
     const loginRequest = req.body as LoginRequest;
     const authResponse = await authService.login(loginRequest);
     res.status(200).json(authResponse);
-  } catch (error) {
+  } catch (error: unknown) {
+    const err = error as { message?: string; code?: string; email?: string };
+    if (err.code === 'EMAIL_NOT_VERIFIED') {
+      res.status(403).json({
+        code: 'EMAIL_NOT_VERIFIED',
+        message: err.message ?? 'Please verify your email address',
+        email: err.email,
+      });
+      return;
+    }
+    if (err.code === 'ACCOUNT_PENDING') {
+      res.status(403).json({ code: 'ACCOUNT_PENDING', message: err.message });
+      return;
+    }
+    if (err.code === 'ACCOUNT_REJECTED') {
+      res.status(403).json({ code: 'ACCOUNT_REJECTED', message: err.message });
+      return;
+    }
+    if (err.code === 'ACCOUNT_SUSPENDED') {
+      res.status(403).json({ code: 'ACCOUNT_SUSPENDED', message: err.message });
+      return;
+    }
+    if (err.message === 'Invalid credentials' || err.message === 'Account is disabled') {
+      res.status(401).json({ message: err.message });
+      return;
+    }
     next(error);
   }
 }
@@ -101,5 +127,38 @@ export async function me(req: AuthRequest, res: Response, next: NextFunction) {
     res.status(200).json(formatUserResponse(user, req.user.role));
   } catch (error) {
     next(error);
+  }
+}
+
+export async function forgotPassword(req: Request, res: Response) {
+  const { email } = req.body as { email?: string };
+  if (!email || typeof email !== 'string') {
+    res.status(400).json({ message: 'Email is required' });
+    return;
+  }
+  try {
+    const { requestPasswordReset } = await import('../services/password-reset.service.js');
+    await requestPasswordReset(email.trim().toLowerCase());
+  } catch (_) { /* silent — never reveal whether email exists */ }
+  res.status(200).json({ message: 'If an account with that email exists, a reset link has been sent.' });
+}
+
+export async function doResetPassword(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { token, password } = req.body as { token?: string; password?: string };
+    if (!token || typeof token !== 'string') {
+      res.status(400).json({ message: 'Reset token is required' });
+      return;
+    }
+    if (!password || typeof password !== 'string') {
+      res.status(400).json({ message: 'New password is required' });
+      return;
+    }
+    const { resetPassword } = await import('../services/password-reset.service.js');
+    await resetPassword(token, password);
+    res.status(200).json({ message: 'Password reset successfully. You can now log in.' });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Reset failed';
+    res.status(400).json({ message: msg });
   }
 }

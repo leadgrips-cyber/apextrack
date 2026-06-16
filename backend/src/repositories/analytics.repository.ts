@@ -379,3 +379,259 @@ export async function getRecentPostbacks(limit: number = 20): Promise<RecentPost
 
   return result.rows;
 }
+
+// ─── Reports ────────────────────────────────────────────────────────────────
+
+function endDateClause(col: string, paramIdx: number): string {
+  return `${col} < ($${paramIdx}::date + INTERVAL '1 day')`;
+}
+
+export interface ClickReportRow {
+  click_id: string;
+  offer_name: string;
+  affiliate_name: string;
+  affiliate_email: string;
+  country_code: string | null;
+  device_type: string | null;
+  sub1: string | null;
+  sub2: string | null;
+  sub3: string | null;
+  sub4: string | null;
+  sub5: string | null;
+  created_at: string;
+}
+
+export async function getClickReport(params: {
+  startDate?: string;
+  endDate?: string;
+  offerId?: number;
+  publisherEmail?: string;
+  search?: string;
+  page: number;
+  pageSize: number;
+}): Promise<{ rows: ClickReportRow[]; total: number }> {
+  const clauses: string[] = [];
+  const p: unknown[] = [];
+
+  if (params.startDate)     { p.push(params.startDate);     clauses.push(`cl.created_at >= $${p.length}`); }
+  if (params.endDate)       { p.push(params.endDate);       clauses.push(endDateClause('cl.created_at', p.length)); }
+  if (params.offerId)       { p.push(params.offerId);       clauses.push(`cl.offer_id = $${p.length}`); }
+  if (params.publisherEmail){ p.push(`%${params.publisherEmail}%`); clauses.push(`p.email ILIKE $${p.length}`); }
+  if (params.search) {
+    p.push(`%${params.search}%`);
+    const idx = p.length;
+    clauses.push(`(o.name ILIKE $${idx} OR p.email ILIKE $${idx} OR p.full_name ILIKE $${idx} OR cl.click_id::TEXT ILIKE $${idx})`);
+  }
+
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  const countP = [...p];
+
+  p.push(params.pageSize, (params.page - 1) * params.pageSize);
+  const limitIdx = p.length - 1;
+  const offsetIdx = p.length;
+
+  const [rowsResult, countResult] = await Promise.all([
+    query<ClickReportRow>(
+      `SELECT
+         cl.click_id,
+         o.name AS offer_name,
+         p.full_name AS affiliate_name,
+         p.email AS affiliate_email,
+         cl.country_code,
+         cl.device_type,
+         cl.sub1, cl.sub2, cl.sub3, cl.sub4, cl.sub5,
+         cl.created_at
+       FROM clicks cl
+       JOIN offers o ON cl.offer_id = o.id
+       JOIN publishers p ON cl.publisher_id = p.id
+       ${where}
+       ORDER BY cl.created_at DESC
+       LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+      p
+    ),
+    query<{ count: string }>(
+      `SELECT COUNT(*) FROM clicks cl
+       JOIN offers o ON cl.offer_id = o.id
+       JOIN publishers p ON cl.publisher_id = p.id
+       ${where}`,
+      countP
+    ),
+  ]);
+
+  return { rows: rowsResult.rows, total: Number(countResult.rows[0]?.count ?? 0) };
+}
+
+export interface ConversionReportRow {
+  id: string;
+  transaction_id: string;
+  click_id: string;
+  offer_name: string;
+  advertiser_name: string | null;
+  affiliate_name: string;
+  affiliate_email: string;
+  conversion_status: string;
+  payout_amount: string;
+  revenue_amount: string;
+  event_timestamp: string;
+  validated_at: string | null;
+  rejected_at: string | null;
+  rejection_reason: string | null;
+}
+
+export async function getConversionReport(params: {
+  startDate?: string;
+  endDate?: string;
+  offerId?: number;
+  publisherEmail?: string;
+  status?: string;
+  search?: string;
+  page: number;
+  pageSize: number;
+}): Promise<{ rows: ConversionReportRow[]; total: number }> {
+  const clauses: string[] = [];
+  const p: unknown[] = [];
+
+  if (params.startDate)     { p.push(params.startDate);               clauses.push(`c.event_timestamp >= $${p.length}`); }
+  if (params.endDate)       { p.push(params.endDate);                 clauses.push(endDateClause('c.event_timestamp', p.length)); }
+  if (params.offerId)       { p.push(params.offerId);                 clauses.push(`c.offer_id = $${p.length}`); }
+  if (params.status)        { p.push(params.status.toUpperCase());    clauses.push(`c.conversion_status = $${p.length}`); }
+  if (params.publisherEmail){ p.push(`%${params.publisherEmail}%`);   clauses.push(`p.email ILIKE $${p.length}`); }
+  if (params.search) {
+    p.push(`%${params.search}%`);
+    const idx = p.length;
+    clauses.push(`(o.name ILIKE $${idx} OR p.email ILIKE $${idx} OR p.full_name ILIKE $${idx} OR c.id::TEXT ILIKE $${idx} OR c.external_reference ILIKE $${idx})`);
+  }
+
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  const countP = [...p];
+
+  p.push(params.pageSize, (params.page - 1) * params.pageSize);
+  const limitIdx = p.length - 1;
+  const offsetIdx = p.length;
+
+  const [rowsResult, countResult] = await Promise.all([
+    query<ConversionReportRow>(
+      `SELECT
+         c.id,
+         COALESCE(c.external_reference, '') AS transaction_id,
+         c.click_id::TEXT,
+         o.name AS offer_name,
+         a.company_name AS advertiser_name,
+         p.full_name AS affiliate_name,
+         p.email AS affiliate_email,
+         c.conversion_status,
+         c.payout_amount::TEXT,
+         c.revenue_amount::TEXT,
+         c.event_timestamp,
+         c.validated_at,
+         c.rejected_at,
+         c.rejection_reason
+       FROM conversions c
+       JOIN offers o ON c.offer_id = o.id
+       LEFT JOIN advertisers a ON o.advertiser_id = a.id
+       JOIN publishers p ON c.publisher_id = p.id
+       ${where}
+       ORDER BY c.created_at DESC
+       LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+      p
+    ),
+    query<{ count: string }>(
+      `SELECT COUNT(*) FROM conversions c
+       JOIN offers o ON c.offer_id = o.id
+       LEFT JOIN advertisers a ON o.advertiser_id = a.id
+       JOIN publishers p ON c.publisher_id = p.id
+       ${where}`,
+      countP
+    ),
+  ]);
+
+  return { rows: rowsResult.rows, total: Number(countResult.rows[0]?.count ?? 0) };
+}
+
+export interface DailyReportRow {
+  date: string;
+  clicks: number;
+  conversions: number;
+  revenue: string;
+  payout: string;
+  profit: string;
+}
+
+export async function getDailyReport(params: {
+  startDate: string;
+  endDate: string;
+  offerId?: number;
+  publisherEmail?: string;
+}): Promise<DailyReportRow[]> {
+  // Click aggregation (click date)
+  const clickClauses: string[] = ['cl.created_at >= $1', endDateClause('cl.created_at', 2)];
+  const clickP: unknown[] = [params.startDate, params.endDate];
+
+  if (params.offerId)       { clickP.push(params.offerId);             clickClauses.push(`cl.offer_id = $${clickP.length}`); }
+  if (params.publisherEmail){ clickP.push(`%${params.publisherEmail}%`); clickClauses.push(`p.email ILIKE $${clickP.length}`); }
+
+  const clickJoin = params.publisherEmail ? 'JOIN publishers p ON cl.publisher_id = p.id' : '';
+  const clickWhere = `WHERE ${clickClauses.join(' AND ')}`;
+
+  // Conversion aggregation (conversion date)
+  const convClauses: string[] = ['c.event_timestamp >= $1', endDateClause('c.event_timestamp', 2)];
+  const convP: unknown[] = [params.startDate, params.endDate];
+
+  if (params.offerId)       { convP.push(params.offerId);               convClauses.push(`c.offer_id = $${convP.length}`); }
+  if (params.publisherEmail){ convP.push(`%${params.publisherEmail}%`); convClauses.push(`p.email ILIKE $${convP.length}`); }
+
+  const convJoin = params.publisherEmail ? 'JOIN publishers p ON c.publisher_id = p.id' : '';
+  const convWhere = `WHERE ${convClauses.join(' AND ')}`;
+
+  const [clickResult, convResult] = await Promise.all([
+    query<{ date: string; clicks: string }>(
+      `SELECT DATE(cl.created_at)::TEXT AS date, COUNT(*) AS clicks
+       FROM clicks cl ${clickJoin}
+       ${clickWhere}
+       GROUP BY DATE(cl.created_at)`,
+      clickP
+    ),
+    query<{ date: string; conversions: string; revenue: string; payout: string }>(
+      `SELECT
+         DATE(c.event_timestamp)::TEXT AS date,
+         COUNT(*) AS conversions,
+         COALESCE(SUM(c.revenue_amount), 0)::TEXT AS revenue,
+         COALESCE(SUM(c.payout_amount), 0)::TEXT AS payout
+       FROM conversions c ${convJoin}
+       ${convWhere}
+       GROUP BY DATE(c.event_timestamp)`,
+      convP
+    ),
+  ]);
+
+  // Merge by date
+  const byDate = new Map<string, DailyReportRow>();
+
+  for (const row of clickResult.rows) {
+    byDate.set(row.date, {
+      date: row.date,
+      clicks: Number(row.clicks),
+      conversions: 0,
+      revenue: '0.00',
+      payout: '0.00',
+      profit: '0.00',
+    });
+  }
+
+  for (const row of convResult.rows) {
+    const existing = byDate.get(row.date) ?? {
+      date: row.date, clicks: 0, conversions: 0, revenue: '0.00', payout: '0.00', profit: '0.00',
+    };
+    const rev = Number(row.revenue);
+    const pay = Number(row.payout);
+    byDate.set(row.date, {
+      ...existing,
+      conversions: Number(row.conversions),
+      revenue: Number(row.revenue).toFixed(2),
+      payout: Number(row.payout).toFixed(2),
+      profit: (rev - pay).toFixed(2),
+    });
+  }
+
+  return Array.from(byDate.values()).sort((a, b) => b.date.localeCompare(a.date));
+}

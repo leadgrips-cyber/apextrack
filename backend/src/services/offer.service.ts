@@ -1,4 +1,6 @@
 import * as offerRepository from "../repositories/offer.repository.js";
+import * as advertiserRepository from "../repositories/advertiser.repository.js";
+import { sendTemplateEmail } from "./mailer.service.js";
 import { OfferCreatePayload, OfferFilterParams, OfferRecord, OfferUpdatePayload, TrackingProtocol } from "../types/offer.js";
 
 const TRACKING_PROTOCOLS: TrackingProtocol[] = ['S2S', 'COOKIE', 'PIXEL', 'SERVER'];
@@ -85,6 +87,8 @@ export async function createOffer(payload: OfferCreatePayload, adminId: string) 
     target_devices: normalizeStringArray(payload.target_devices),
     landing_page_url: landingUrl,
     preview_url: payload.preview_url?.trim() || undefined,
+    offer_logo_url: payload.offer_logo_url?.trim() || null,
+    conversion_approval_mode: (payload.conversion_approval_mode === 'MANUAL_REVIEW' ? 'MANUAL_REVIEW' : 'AUTO_APPROVE') as 'AUTO_APPROVE' | 'MANUAL_REVIEW',
     terms: payload.terms?.trim() || undefined,
     caps: normalizeJson(payload.caps),
     traffic_rules: normalizeJson(payload.traffic_rules),
@@ -115,6 +119,8 @@ export async function updateOffer(offerId: number, payload: OfferUpdatePayload) 
   if (payload.target_devices !== undefined) updates.target_devices = normalizeStringArray(payload.target_devices);
   if (payload.landing_page_url !== undefined) updates.landing_page_url = payload.landing_page_url.trim();
   if (payload.preview_url !== undefined) updates.preview_url = payload.preview_url?.trim() || undefined;
+  if (payload.offer_logo_url !== undefined) updates.offer_logo_url = payload.offer_logo_url?.trim() || null;
+  if (payload.conversion_approval_mode !== undefined) updates.conversion_approval_mode = payload.conversion_approval_mode === 'MANUAL_REVIEW' ? 'MANUAL_REVIEW' : 'AUTO_APPROVE';
   if (payload.terms !== undefined) updates.terms = payload.terms?.trim() || undefined;
   if (payload.caps !== undefined) updates.caps = normalizeJson(payload.caps);
   if (payload.traffic_rules !== undefined) updates.traffic_rules = normalizeJson(payload.traffic_rules);
@@ -123,9 +129,28 @@ export async function updateOffer(offerId: number, payload: OfferUpdatePayload) 
   if (payload.admin_notes !== undefined) updates.admin_notes = payload.admin_notes?.trim() || undefined;
   if (payload.advertiser_id !== undefined) updates.advertiser_id = payload.advertiser_id || null;
 
+  // Capture previous status before update to detect activation transition
+  const previousStatus = updates.status === 'ACTIVE'
+    ? (await offerRepository.findOfferById(offerId))?.status
+    : undefined;
+
   const updated = await offerRepository.updateOfferById(offerId, updates);
   if (!updated) {
     throw new Error('Offer not found');
+  }
+
+  // Send offer_approved email when status transitions to ACTIVE (not when already ACTIVE)
+  if (updates.status === 'ACTIVE' && previousStatus !== 'ACTIVE' && updated.advertiser_id) {
+    try {
+      const advertiser = await advertiserRepository.findAdvertiserById(updated.advertiser_id);
+      if (advertiser) {
+        const firstName = (advertiser.contact_name ?? '').split(' ')[0] ?? '';
+        sendTemplateEmail(advertiser.email, 'offer_approved', {
+          first_name: firstName,
+          offer_name: updated.name,
+        }).catch(() => {});
+      }
+    } catch (_err) { /* email failure must not interrupt update */ }
   }
 
   return updated;
@@ -144,6 +169,18 @@ export async function activateOffer(offerId: number) {
   if (!updated) {
     throw new Error('Offer not found');
   }
+  if (updated.advertiser_id) {
+    try {
+      const advertiser = await advertiserRepository.findAdvertiserById(updated.advertiser_id);
+      if (advertiser) {
+        const firstName = (advertiser.contact_name ?? '').split(' ')[0] ?? '';
+        sendTemplateEmail(advertiser.email, 'offer_approved', {
+          first_name: firstName,
+          offer_name: updated.name,
+        }).catch(() => {});
+      }
+    } catch (_err) { /* email failure must not interrupt activation */ }
+  }
   return updated;
 }
 
@@ -151,6 +188,26 @@ export async function archiveOffer(offerId: number) {
   const updated = await offerRepository.archiveOfferById(offerId);
   if (!updated) {
     throw new Error('Offer not found');
+  }
+  return updated;
+}
+
+export async function rejectOffer(offerId: number) {
+  const updated = await offerRepository.archiveOfferById(offerId);
+  if (!updated) {
+    throw new Error('Offer not found');
+  }
+  if (updated.advertiser_id) {
+    try {
+      const advertiser = await advertiserRepository.findAdvertiserById(updated.advertiser_id);
+      if (advertiser) {
+        const firstName = (advertiser.contact_name ?? '').split(' ')[0] ?? '';
+        sendTemplateEmail(advertiser.email, 'offer_rejected', {
+          first_name: firstName,
+          offer_name: updated.name,
+        }).catch(() => {});
+      }
+    } catch (_err) { /* email failure must not interrupt rejection */ }
   }
   return updated;
 }

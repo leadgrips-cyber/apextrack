@@ -150,6 +150,7 @@ export interface PublisherDetailRecord extends PublisherRecord {
   updated_at: string;
   approved_at: string | null;
   rejected_reason: string | null;
+  profile_metadata: Record<string, unknown> | null;
 }
 
 export async function getPublisherById(publisherId: string): Promise<PublisherDetailRecord> {
@@ -162,6 +163,45 @@ export async function getPublisherById(publisherId: string): Promise<PublisherDe
   }
   const data = await response.json();
   return data.publisher as PublisherDetailRecord;
+}
+
+export interface UpdatePublisherProfilePayload {
+  full_name?: string;
+  email?: string;
+  login_name?: string;
+  company_name?: string;
+  country_code?: string;
+  account_status?: string;
+  new_password?: string;
+  phone?: string;
+  website?: string;
+  address?: string;
+  city?: string;
+  state_name?: string;
+  postal_code?: string;
+  payment_method?: string;
+  payment_details?: string;
+  payment_term?: string;
+  internal_notes?: string;
+  traffic_quality_notes?: string;
+  risk_score?: string;
+  telegram?: string;
+  skype?: string;
+  whatsapp?: string;
+}
+
+export async function updatePublisherProfile(publisherId: string, payload: UpdatePublisherProfilePayload): Promise<PublisherRecord> {
+  const response = await fetch(`${API_URL}/publishers/${publisherId}/profile`, {
+    method: "PATCH",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error((data as any).message || "Failed to update publisher profile");
+  }
+  const data = await response.json();
+  return data.publisher as PublisherRecord;
 }
 
 export async function approveAffiliate(publisherId: string): Promise<PublisherRecord> {

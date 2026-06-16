@@ -48,6 +48,8 @@ export interface PublisherRecord {
   profile_metadata?: Record<string, string> | null;
   password_hash: string;
   is_active: boolean;
+  email_verified: boolean;
+  email_verified_at: string | null;
   created_at: string;
   updated_at: string;
 }

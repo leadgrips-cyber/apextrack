@@ -9,6 +9,9 @@ import {
   getRecentPostbacksData,
   getRevenueByOfferData,
   getRevenueTransactionsData,
+  getClickReportData,
+  getConversionReportData,
+  getDailyReportData,
 } from "../services/analytics.service.js";
 
 function parsePositiveNumber(value: unknown, fallback: number): number {
@@ -33,6 +36,13 @@ function parseISODate(value: unknown): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+function parseDateParam(value: unknown): string | undefined {
+  if (!value || typeof value !== 'string') return undefined;
+  const s = value.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return undefined;
+  return Number.isFinite(new Date(s).getTime()) ? s : undefined;
 }
 
 export async function handleGetDashboardSummary(req: AuthRequest, res: Response, next: NextFunction) {
@@ -123,6 +133,61 @@ export async function handleGetRevenueByOffer(req: AuthRequest, res: Response, n
 
     const result = await getRevenueByOfferData({ page, pageSize, sortBy, sortDir, startDate, endDate });
     res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function handleGetClickReport(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const page      = parsePositiveNumber(req.query.page, 1);
+    const pageSize  = parsePositiveNumber(req.query.page_size, 25);
+    const startDate = parseDateParam(req.query.start_date);
+    const endDate   = parseDateParam(req.query.end_date);
+    const offerId   = req.query.offer_id ? Number(req.query.offer_id) : undefined;
+    const publisherEmail = typeof req.query.publisher_email === 'string' && req.query.publisher_email ? req.query.publisher_email : undefined;
+    const search    = typeof req.query.search === 'string' && req.query.search ? req.query.search : undefined;
+
+    const result = await getClickReportData({ page, pageSize, startDate, endDate, offerId, publisherEmail, search });
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function handleGetConversionReport(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const page      = parsePositiveNumber(req.query.page, 1);
+    const pageSize  = parsePositiveNumber(req.query.page_size, 25);
+    const startDate = parseDateParam(req.query.start_date);
+    const endDate   = parseDateParam(req.query.end_date);
+    const offerId   = req.query.offer_id ? Number(req.query.offer_id) : undefined;
+    const status    = typeof req.query.status          === 'string' && req.query.status          ? req.query.status          : undefined;
+    const publisherEmail = typeof req.query.publisher_email === 'string' && req.query.publisher_email ? req.query.publisher_email : undefined;
+    const search    = typeof req.query.search          === 'string' && req.query.search          ? req.query.search          : undefined;
+
+    const result = await getConversionReportData({ page, pageSize, startDate, endDate, offerId, status, publisherEmail, search });
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function handleGetDailyReport(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const startDate = parseDateParam(req.query.start_date);
+    const endDate   = parseDateParam(req.query.end_date);
+
+    if (!startDate || !endDate) {
+      res.status(400).json({ message: 'start_date and end_date are required' });
+      return;
+    }
+
+    const offerId   = req.query.offer_id ? Number(req.query.offer_id) : undefined;
+    const publisherEmail = typeof req.query.publisher_email === 'string' && req.query.publisher_email ? req.query.publisher_email : undefined;
+
+    const rows = await getDailyReportData({ startDate, endDate, offerId, publisherEmail });
+    res.json({ rows });
   } catch (error) {
     next(error);
   }

@@ -338,7 +338,7 @@ export function FinanceRevenueView() {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b theme-border">
@@ -486,7 +486,7 @@ export function FinanceRevenueView() {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b theme-border">

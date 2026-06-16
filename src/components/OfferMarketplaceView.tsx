@@ -31,6 +31,9 @@ import {
 } from "lucide-react";
 import { SYSTEM_POSTBACK_PLACEHOLDERS } from "../data/publisherDemo";
 import * as trackingApi from "../services/tracking";
+import * as publicDetailApi from "../services/offerPublicDetail";
+import type { PublisherOfferDetail } from "../services/offerPublicDetail";
+import { listCategories } from "../services/offerCategories";
 import { useBranding } from "../contexts/BrandingContext";
 
 const COUNTRY_OPTIONS = [
@@ -255,7 +258,7 @@ interface OfferMarketplaceViewProps {
   setSelectedOfferId: (id: string | null) => void;
   offers: any[];
   setOffers: React.Dispatch<React.SetStateAction<any[]>>;
-  onAddNotification: (
+  onAddNotification?: (
     type: "approved" | "rejected" | "payout" | "paused" | "activated" | "announcement",
     title: string,
     message: string,
@@ -270,11 +273,12 @@ export function OfferMarketplaceView({
   setSelectedOfferId,
   offers,
   setOffers,
-  onAddNotification
+  onAddNotification = () => {},
 }: OfferMarketplaceViewProps) {
   const branding = useBranding();
   const [categoryFilter, setCategoryFilter] = useState("");
   const [countryFilter, setCountryFilter] = useState("");
+  const [dbCategories, setDbCategories] = useState<string[]>([]);
   const [offerNameFilter, setOfferNameFilter] = useState("");
   const [offerIdFilter, setOfferIdFilter] = useState("");
   const [appliedFilters, setAppliedFilters] = useState({
@@ -334,11 +338,10 @@ export function OfferMarketplaceView({
       target_geos: Array.isArray(offer.target_geos) ? offer.target_geos : [],
       target_devices: Array.isArray(offer.target_devices) ? offer.target_devices : [],
       description: offer.description ?? "",
-      landers: Array.isArray(offer.landers) ? offer.landers : [],
-      creatives: Array.isArray(offer.creatives) ? offer.creatives : [],
-      trafficRestrictions: Array.isArray(offer.trafficRestrictions) ? offer.trafficRestrictions : [],
       specs: offer.specs ?? null,
       rejectionReason: offer.rejectionReason ?? null,
+      logo_url: offer.offer_logo_url ?? null,
+      traffic_rules: offer.traffic_rules ?? null,
     };
   };
 
@@ -435,27 +438,51 @@ export function OfferMarketplaceView({
   const [showAdminMoreInfoForm, setShowAdminMoreInfoForm] = useState(false);
   const [adminDialogLogs, setAdminDialogLogs] = useState<{ id: string; sender: string; text: string; time: string }[]>([]);
 
+  // Publisher-detail: landing pages, creatives, allowed geos/devices from DB
+  const [offerPublicDetail, setOfferPublicDetail] = useState<PublisherOfferDetail | null>(null);
+  const [offerPublicDetailLoading, setOfferPublicDetailLoading] = useState(false);
+
   // Find targeted offer if any
   const currentOffer = useMemo(() => {
     if (!selectedOfferId) return null;
     return marketplaceOffers.find(o => o.id === selectedOfferId) || null;
   }, [selectedOfferId, marketplaceOffers]);
 
-  // Set default lander when changing currently inspected offer
+  // Fetch publisher detail (landing pages, creatives, geo/device targeting) when offer is selected
   useEffect(() => {
-    if (currentOffer && currentOffer.landers && currentOffer.landers.length > 0) {
-      setSelectedLanderId(currentOffer.landers[0].id);
+    if (!selectedOfferId) {
+      setOfferPublicDetail(null);
+      return;
+    }
+    let active = true;
+    setOfferPublicDetailLoading(true);
+    setOfferPublicDetail(null);
+    publicDetailApi.getPublisherDetail(selectedOfferId)
+      .then(data => { if (active) setOfferPublicDetail(data); })
+      .catch(() => { /* non-fatal — sections hide when data is absent */ })
+      .finally(() => { if (active) setOfferPublicDetailLoading(false); });
+    return () => { active = false; };
+  }, [selectedOfferId]);
+
+  // Set default lander when landers become available
+  useEffect(() => {
+    const landers = offerPublicDetail?.landing_pages ?? [];
+    if (landers.length > 0) {
+      setSelectedLanderId(landers[0].id);
       setPostbackUrlInput(`https://callback.my-tracker-system.com/receive?click_id={click_id}&payout={payout}&sub1={sub1}`);
     } else {
       setSelectedLanderId("");
     }
-  }, [currentOffer]);
+  }, [offerPublicDetail]);
 
-  // Filters calculation
-  const categories = useMemo(() => {
-    const unique = Array.from(new Set(marketplaceOffers.map((offer) => offer.category)));
-    return unique.sort((a, b) => a.localeCompare(b));
-  }, [marketplaceOffers]);
+  // Load categories from DB (active only) for filter dropdown
+  useEffect(() => {
+    listCategories(true)
+      .then(records => setDbCategories(records.map(r => r.name).sort((a, b) => a.localeCompare(b))))
+      .catch(() => {/* non-fatal — filter will have no categories */});
+  }, []);
+
+  const categories = dbCategories;
 
   // Only these statuses are derived from ACTIVE offers and are visible in the marketplace
   const MARKETPLACE_VISIBLE = new Set(["open_access", "requires_approval", "approved", "pending_approval", "rejected"]);
@@ -748,12 +775,19 @@ export function OfferMarketplaceView({
               </span>
             </div>
 
-            <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight">
-              {currentOffer.name}
-            </h2>
-            <p className="text-slate-300 text-xs leading-relaxed">
-              {currentOffer.description}
-            </p>
+            <div className="flex items-center gap-3">
+              {currentOffer.logo_url && (
+                <img src={currentOffer.logo_url} alt="" className="w-14 h-14 object-contain rounded-xl border border-slate-700 bg-slate-900 flex-shrink-0" />
+              )}
+              <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight">
+                {currentOffer.name}
+              </h2>
+            </div>
+            {currentOffer.terms && (
+              <p className="text-slate-600 text-xs leading-relaxed">
+                {currentOffer.terms}
+              </p>
+            )}
           </div>
 
           {/* Right quick stats summary */}
@@ -788,147 +822,140 @@ export function OfferMarketplaceView({
           {/* LEFT PANELS: GEOS, RESTRICTIONS, LANDERS (7/12) */}
           <div className="lg:col-span-7 space-y-6">
             
-            {/* GEOGRAPHIC GEO TARGET CHIPS */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-sm">
-              <strong className="text-slate-950 text-xs uppercase font-mono tracking-wider block">
-                Allowed Geo Targets ({currentOffer.geos.length})
-              </strong>
-              <div className="flex flex-wrap gap-1.5">
-                {currentOffer.geos.map((geo: string) => (
-                  <span key={geo} className="bg-slate-950 text-slate-300 border border-slate-800 px-2.5 py-1 rounded-lg text-xs font-bold font-mono tracking-wide flex items-center gap-1.5">
-                    <Globe className="w-3.5 h-3.5 text-cyan-400" />
-                    {geo}
-                  </span>
-                ))}
+            {/* GEOGRAPHIC GEO TARGET CHIPS — from targeting rules, hide if empty */}
+            {offerPublicDetail && offerPublicDetail.allowed_geos.length > 0 && (
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-sm">
+                <strong className="text-slate-950 text-xs uppercase font-mono tracking-wider block">
+                  Allowed Geo Targets ({offerPublicDetail.allowed_geos.length})
+                </strong>
+                <div className="flex flex-wrap gap-1.5">
+                  {offerPublicDetail.allowed_geos.map((geo: string) => (
+                    <span key={geo} className="bg-slate-950 text-slate-300 border border-slate-800 px-2.5 py-1 rounded-lg text-xs font-bold font-mono tracking-wide flex items-center gap-1.5">
+                      <Globe className="w-3.5 h-3.5 text-cyan-400" />
+                      {geo}
+                    </span>
+                  ))}
+                </div>
               </div>
-              <p className="text-[10px] text-slate-500 font-mono leading-normal">
-                Clicks originating from unsupported geographic positions will route dynamically to a fallback catalogue.
-              </p>
-            </div>
+            )}
 
-            {/* TRAFFIC RESTRICTIONS RULE CARD */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-sm">
-              <strong className="text-slate-950 text-xs uppercase font-mono tracking-wider block flex items-center gap-1.5 text-rose-600">
-                <AlertTriangle className="w-4 h-4 text-rose-500" />
-                Traffic Limitations (STRICT POLICY)
-              </strong>
-              
-              <ul className="space-y-1.5">
-                {currentOffer.trafficRestrictions.map((restrict: string, rIdx: number) => (
-                  <li key={rIdx} className="text-xs text-slate-300 flex items-start gap-2">
-                    <span className="text-rose-500 font-bold block mt-0.5">•</span>
-                    <span>{restrict}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {/* ALLOWED DEVICES — from targeting rules, hide if empty */}
+            {offerPublicDetail && offerPublicDetail.allowed_devices.length > 0 && (
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-sm">
+                <strong className="text-slate-950 text-xs uppercase font-mono tracking-wider block">
+                  Allowed Devices
+                </strong>
+                <div className="flex flex-wrap gap-1.5">
+                  {offerPublicDetail.allowed_devices.map((device: string) => (
+                    <span key={device} className="bg-slate-950 text-slate-300 border border-slate-800 px-2.5 py-1 rounded-lg text-xs font-bold font-mono tracking-wide capitalize">
+                      {device}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
-            {/* DIRECT LANDERS & PREVIEWS - HIDE IF CAMPAIGN ACCESSIBLE SECTIONS REQUIRE IT */}
-            {isAccessible ? (
-              // Show Approved Landing Pages section ONLY if admin added landing pages to the offer
-              currentOffer.landers && currentOffer.landers.length > 0 ? (
-                <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 animate-fadeIn shadow-sm">
-                  <strong className="text-slate-950 text-xs uppercase font-mono tracking-wider block text-emerald-600">
-                    ✓ Approved Landing Pages ({currentOffer.landers.length})
+            {/* TRAFFIC RESTRICTIONS — from offer traffic_rules.text, hide if empty */}
+            {(() => {
+              const tr = currentOffer.traffic_rules as any;
+              const trafficText: string = tr?.text ?? tr?.value ?? "";
+              if (!trafficText) return null;
+              const lines = trafficText.split("\n").map((l: string) => l.trim()).filter(Boolean);
+              if (lines.length === 0) return null;
+              return (
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-sm">
+                  <strong className="text-slate-950 text-xs uppercase font-mono tracking-wider flex items-center gap-1.5 text-rose-600">
+                    <AlertTriangle className="w-4 h-4 text-rose-500" />
+                    Traffic Limitations (STRICT POLICY)
                   </strong>
+                  <ul className="space-y-1.5">
+                    {lines.map((line: string, i: number) => (
+                      <li key={i} className="text-xs text-slate-700 flex items-start gap-2">
+                        <span className="text-rose-500 font-bold block mt-0.5">•</span>
+                        <span>{line}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })()}
 
-                  <div className="space-y-2">
-                    {currentOffer.landers.map((lander: any) => (
-                      <div key={lander.id} className="p-3 bg-slate-950 rounded-xl border border-slate-850 flex items-center justify-between text-xs gap-3">
-                        <div className="space-y-0.5 min-w-0">
-                          <strong className="text-slate-200 block truncate font-sans">{lander.name}</strong>
-                          <code className="text-[10px] text-slate-500 block truncate font-mono">{lander.url}</code>
-                        </div>
+            {/* LANDING PAGES — from DB, visible only when offer is accessible */}
+            {isAccessible && offerPublicDetail && offerPublicDetail.landing_pages.length > 0 && (
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 animate-fadeIn shadow-sm">
+                <strong className="text-slate-950 text-xs uppercase font-mono tracking-wider block text-emerald-600">
+                  ✓ Approved Landing Pages ({offerPublicDetail.landing_pages.length})
+                </strong>
+                <div className="space-y-2">
+                  {offerPublicDetail.landing_pages.map((lander) => (
+                    <div key={lander.id} className="p-3 bg-slate-950 rounded-xl border border-slate-850 flex items-center justify-between text-xs gap-3">
+                      <div className="space-y-0.5 min-w-0">
+                        <strong className="text-slate-200 block truncate font-sans">{lander.name}</strong>
+                        <code className="text-[10px] text-slate-500 block truncate font-mono">{lander.url}</code>
+                      </div>
+                      {lander.preview_url ? (
                         <a
-                          href={lander.url}
+                          href={lander.preview_url}
                           target="_blank"
-                          rel="noreferrer referrer"
+                          rel="noreferrer"
                           className="bg-slate-900 hover:bg-slate-850 text-slate-400 hover:text-white px-2.5 py-1.5 rounded-lg border border-slate-800 transition text-[10px] select-none flex items-center gap-1 shrink-0"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
                           Preview
                         </a>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null // If no landing pages exist: Hide the section completely
-            ) : (
-              // Hides landing pages on requires approval / pending / rejected states
-              null
-            )}
-
-            {/* CREATIVE AD BANNER CHIPS - HIDE IF CAMPAIGN ACCESSIBLE SECTIONS REQUIRE IT */}
-            {isAccessible ? (
-              // Show Available Media Assets & Banner Sizes ONLY if media assets exist
-              currentOffer.creatives && currentOffer.creatives.length > 0 ? (
-                <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 animate-fadeIn shadow-sm">
-                  <strong className="text-slate-950 text-xs uppercase font-mono tracking-wider block text-emerald-600">
-                    ✓ Available Media Assets & Banner Sizes ({currentOffer.creatives.length})
-                  </strong>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {currentOffer.creatives.map((creative: any) => (
-                      <div key={creative.id} className="p-3 bg-slate-950 rounded-xl border border-slate-850 flex items-center justify-between text-xs gap-2">
-                        <div className="space-y-0.5">
-                          <strong className="text-slate-200 block text-xs">{creative.name}</strong>
-                          <span className="text-[10px] text-slate-500 font-mono uppercase">Size: {creative.size} / {creative.type}</span>
-                        </div>
-                        <button
-                          onClick={() => handleCopy(`<a href="${detailLinkUrl ?? ''}"><img src="${creative.url || ''}" width="${creative.size.split('x')[0]}" height="${creative.size.split('x')[1]}"/></a>`, `creative_${creative.id}`)}
-                          className="bg-slate-900 hover:bg-slate-850 text-cyan-400 text-[10px] font-mono px-2 py-1 rounded border border-slate-800 shrink-0"
+                      ) : (
+                        <a
+                          href={lander.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="bg-slate-900 hover:bg-slate-850 text-slate-400 hover:text-white px-2.5 py-1.5 rounded-lg border border-slate-800 transition text-[10px] select-none flex items-center gap-1 shrink-0"
                         >
-                          {copiedKey === `creative_${creative.id}` ? "Copied HTML!" : "Get Tag"}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null // If no assets exist: Hide the section completely
-            ) : (
-              // Hides creative download URLs on restricted states
-              null
-            )}
-
-            {/* DISCUSSION CHAT STREAM WITH MANAGER FOR PENDING & ACTIVE */}
-            {!isRequiresApproval && (
-              <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3.5 shadow-sm">
-                <strong className="text-slate-950 text-xs uppercase font-mono tracking-wider block flex items-center gap-1 text-cyan-600">
-                  <Info className="w-4 h-4 text-cyan-600" />
-                  Traffic Audit Message Dialogue
-                </strong>
-
-                {adminDialogLogs.length === 0 ? (
-                  <p className="text-[10px] text-slate-500 font-mono">No communication logs recorded for this campaign application.</p>
-                ) : (
-                  <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
-                    {adminDialogLogs.map(log => (
-                      <div key={log.id} className={`p-2.5 rounded-lg text-xs ${log.sender.includes("Sophia") ? "bg-cyan-950/20 border border-cyan-900/40" : "bg-slate-950 border border-slate-850"}`}>
-                        <div className="flex justify-between items-center text-[9px] font-mono font-bold uppercase tracking-wider mb-1">
-                          <span className={log.sender.includes("Sophia") ? "text-cyan-400" : "text-slate-400"}>{log.sender}</span>
-                          <span className="text-slate-600">{log.time}</span>
-                        </div>
-                        <p className="text-slate-300 text-xs font-mono">{log.text}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="pt-2 border-t border-slate-800">
-                  <input
-                    type="text"
-                    placeholder="Submit message response to AM Sophia..."
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handlePublisherReplyMoreInfo((e.target as HTMLInputElement).value);
-                        (e.target as HTMLInputElement).value = "";
-                      }
-                    }}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-lg p-2 text-xs text-white placeholder-slate-700"
-                  />
-                  <span className="text-[9px] text-slate-500 pt-1 font-mono">Press Enter to dispatch chat message.</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          Open
+                        </a>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
+
+            {/* CREATIVES — from DB, visible only when offer is accessible */}
+            {isAccessible && offerPublicDetail && offerPublicDetail.creatives.length > 0 && (
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 animate-fadeIn shadow-sm">
+                <strong className="text-slate-950 text-xs uppercase font-mono tracking-wider block text-emerald-600">
+                  ✓ Available Media Assets ({offerPublicDetail.creatives.length})
+                </strong>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {offerPublicDetail.creatives.map((creative) => (
+                    <div key={creative.id} className="p-3 bg-slate-950 rounded-xl border border-slate-850 flex items-center justify-between text-xs gap-2">
+                      <div className="space-y-0.5 min-w-0">
+                        <strong className="text-slate-200 block text-xs truncate">{creative.name}</strong>
+                        <span className="text-[10px] text-slate-500 font-mono uppercase">
+                          {creative.creative_type}{creative.dimensions ? ` / ${creative.dimensions}` : ""}
+                        </span>
+                        {creative.notes && (
+                          <span className="text-[10px] text-slate-600 block truncate">{creative.notes}</span>
+                        )}
+                      </div>
+                      {creative.file_url ? (
+                        <a
+                          href={creative.file_url}
+                          download
+                          target="_blank"
+                          rel="noreferrer"
+                          className="bg-slate-900 hover:bg-slate-850 text-cyan-400 text-[10px] font-mono px-2 py-1 rounded border border-slate-800 shrink-0 flex items-center gap-1"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          Download
+                        </a>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
 
           </div>
 
@@ -953,7 +980,7 @@ export function OfferMarketplaceView({
                   {/* Form elements */}
                   <div className="space-y-3 text-xs font-mono">
                     
-                    {currentOffer.landers && currentOffer.landers.length > 0 && (
+                    {offerPublicDetail && offerPublicDetail.landing_pages.length > 0 && (
                       <div>
                         <label className="block text-[10px] uppercase font-semibold text-slate-400">
                           Select Target Lander
@@ -963,7 +990,7 @@ export function OfferMarketplaceView({
                           onChange={(e) => setSelectedLanderId(e.target.value)}
                           className="mt-1 block w-full px-2 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-300 focus:outline-none focus:border-cyan-500"
                         >
-                          {currentOffer.landers.map((lan: any) => (
+                          {offerPublicDetail.landing_pages.map((lan) => (
                             <option key={lan.id} value={lan.id}>{lan.name}</option>
                           ))}
                         </select>
@@ -1419,16 +1446,23 @@ export function OfferMarketplaceView({
 
                       {/* Name & Vertical */}
                       <td className="px-4 py-3.5">
-                        <div className="space-y-0.5">
-                          <span
-                            className="font-bold text-slate-100 cursor-pointer hover:text-cyan-400 transition"
-                            onClick={() => setSelectedOfferId(offer.id)}
-                          >
-                            {offer.name}
-                          </span>
-                          <span className="text-[10px] text-slate-500 font-mono tracking-wider block font-semibold uppercase">
-                            Vertical: {offer.category}
-                          </span>
+                        <div className="flex items-center gap-2.5">
+                          {offer.logo_url ? (
+                            <img src={offer.logo_url} alt="" className="w-7 h-7 object-contain rounded flex-shrink-0" />
+                          ) : (
+                            <div className="w-7 h-7 rounded bg-slate-800 flex-shrink-0" />
+                          )}
+                          <div className="space-y-0.5">
+                            <span
+                              className="font-bold text-slate-100 cursor-pointer hover:text-cyan-400 transition"
+                              onClick={() => setSelectedOfferId(offer.id)}
+                            >
+                              {offer.name}
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-mono tracking-wider block font-semibold uppercase">
+                              Vertical: {offer.category}
+                            </span>
+                          </div>
                         </div>
                       </td>
 

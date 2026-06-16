@@ -47,7 +47,7 @@ export function AdminPublisherManagementView() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-3xl border theme-border bg-white dark:bg-slate-950 shadow-sm">
+      <div className="rounded-3xl border theme-border bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
         <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
           <thead className="bg-slate-50 dark:bg-slate-900">
             <tr>

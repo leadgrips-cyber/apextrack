@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import * as authApi from "../services/auth";
-import { User, Mail, ShieldAlert, Settings, Sliders, CheckCircle, Phone, Globe, MapPin, Building, Hash, Lock, ShieldCheck } from "lucide-react";
+import { Settings, CheckCircle, MapPin, Building, Lock } from "lucide-react";
 import { useBranding } from "../contexts/BrandingContext";
 
 export function ProfileSettingsView() {
@@ -57,10 +57,6 @@ export function ProfileSettingsView() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  
-  // Two-Factor Authentication Toggle
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const [tfaSuccessMessage, setTfaSuccessMessage] = useState("");
 
   const [profileSuccess, setProfileSuccess] = useState(false);
   const [pwdSuccess, setPwdSuccess] = useState(false);
@@ -114,17 +110,6 @@ export function ProfileSettingsView() {
     setNewPassword("");
     setConfirmPassword("");
     setTimeout(() => setPwdSuccess(false), 3000);
-  };
-
-  const toggle2FA = () => {
-    const nextState = !twoFactorEnabled;
-    setTwoFactorEnabled(nextState);
-    if (nextState) {
-      setTfaSuccessMessage("2FA successfully enabled! Credentials verified via simulated Google Authenticator handshake.");
-    } else {
-      setTfaSuccessMessage("2FA disabled. Password now serves as the single authority factor.");
-    }
-    setTimeout(() => setTfaSuccessMessage(""), 4000);
   };
 
   return (
@@ -362,8 +347,7 @@ export function ProfileSettingsView() {
       {/* CREDENTIALS & 2FA MANAGEMENT PANEL: RIGHT (5/12) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* Password override form (7/12 for spacing rhythm) */}
-        <div className="lg:col-span-7 bg-white dark:theme-bg-card border theme-border p-6 rounded-2xl space-y-4 shadow-xs">
+        <div className="lg:col-span-12 bg-white dark:theme-bg-card border theme-border p-6 rounded-2xl space-y-4 shadow-xs">
           
           <h3 className="theme-text-main text-xs font-bold uppercase font-mono tracking-wider flex items-center gap-1.5">
             <Lock className="w-4 h-4 text-cyan-500" />
@@ -435,53 +419,6 @@ export function ProfileSettingsView() {
 
         </div>
 
-        {/* 2FA SETUP TOGGLE CARD: (5/12 for spacing rhythm) */}
-        <div className="lg:col-span-5 theme-bg-card border theme-border p-6 rounded-2xl flex flex-col justify-between space-y-4 shadow-xs">
-          
-          <div className="space-y-3">
-            <h3 className="theme-text-main text-xs font-bold uppercase font-mono tracking-wider flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-cyan-500" />
-              2FA Authentication Guard
-            </h3>
-
-            <p className="text-[11px] theme-text-muted leading-relaxed">
-              Require dual token entry (authenticator App code) upon login from new device addresses, password overrides or billing gateway changes.
-            </p>
-
-            {tfaSuccessMessage && (
-              <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-900 p-2.5 rounded-xl text-[10px] leading-relaxed">
-                {tfaSuccessMessage}
-              </div>
-            )}
-
-            <div className="bg-slate-50 dark:theme-bg-well border theme-border p-3.5 rounded-xl flex items-center justify-between text-xs select-none">
-              <div className="space-y-0.5">
-                <span className="font-bold theme-text-main">Multi-factor (2FA) Status</span>
-                <span className={`text-[10px] block font-mono font-bold ${twoFactorEnabled ? "text-emerald-500" : "text-amber-500"}`}>
-                  {twoFactorEnabled ? "● ACTIVE & ENFORCED" : "○ DISABLED (Standard security)"}
-                </span>
-              </div>
-
-              <button
-                type="button"
-                onClick={toggle2FA}
-                className={`px-3 py-1.5 rounded-xl text-[10px] font-mono tracking-wide uppercase font-bold cursor-pointer transition ${
-                  twoFactorEnabled
-                    ? "bg-rose-500 hover:bg-rose-450 text-white"
-                    : "bg-cyan-550 hover:bg-cyan-500 text-white"
-                }`}
-              >
-                {twoFactorEnabled ? "Deactivate" : "Activate"}
-              </button>
-            </div>
-          </div>
-
-          <div className="theme-bg-well border theme-border p-3.5 rounded-xl text-[10px] theme-text-secondary">
-            <span className="font-bold text-cyan-600 dark:text-cyan-400 block font-mono">SECURITY HARMONIZATION</span>
-            All verified publishers on Level-3 {branding.networkName} commission schemes must maintain authenticated communication channels to secure payment disbursements wallets against MITM threat channels.
-          </div>
-
-        </div>
 
       </div>
 

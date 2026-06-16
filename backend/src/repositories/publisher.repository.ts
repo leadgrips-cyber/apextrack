@@ -17,6 +17,7 @@ export interface PublisherAdminRecord {
   affiliate_code: string;
   is_active: boolean;
   currency: string;
+  profile_metadata?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
   approved_at?: string | null;
@@ -166,6 +167,7 @@ export async function findPublisherById(publisherId: string): Promise<PublisherA
        p.affiliate_code,
        p.is_active,
        p.currency,
+       p.profile_metadata,
        p.created_at,
        p.updated_at,
        p.approved_at,
@@ -251,12 +253,64 @@ export async function updatePublisherStatus(
   return result.rows[0] || null;
 }
 
+export interface PublisherProfileUpdates {
+  full_name?: string;
+  email?: string;
+  login_name?: string;
+  company_name?: string;
+  country_code?: string;
+  account_status?: string;
+  password_hash?: string;
+  profile_metadata_patch?: Record<string, unknown>;
+}
+
+export async function updatePublisherProfile(
+  publisherId: string,
+  updates: PublisherProfileUpdates
+): Promise<PublisherAdminRecord | null> {
+  const fields: string[] = [];
+  const values: unknown[] = [];
+
+  if (updates.full_name !== undefined) { fields.push(`full_name = $${values.length + 1}`); values.push(updates.full_name); }
+  if (updates.email !== undefined)     { fields.push(`email = $${values.length + 1}`);     values.push(updates.email); }
+  if (updates.login_name !== undefined){ fields.push(`login_name = $${values.length + 1}`);values.push(updates.login_name); }
+  if (updates.company_name !== undefined){ fields.push(`company_name = $${values.length + 1}`); values.push(updates.company_name); }
+  if (updates.country_code !== undefined){ fields.push(`country_code = $${values.length + 1}`); values.push(updates.country_code || null); }
+  if (updates.account_status !== undefined){ fields.push(`account_status = $${values.length + 1}`); values.push(updates.account_status); }
+  if (updates.password_hash !== undefined){ fields.push(`password_hash = $${values.length + 1}`); values.push(updates.password_hash); }
+
+  if (updates.profile_metadata_patch && Object.keys(updates.profile_metadata_patch).length > 0) {
+    fields.push(`profile_metadata = COALESCE(profile_metadata, '{}'::jsonb) || $${values.length + 1}::jsonb`);
+    values.push(JSON.stringify(updates.profile_metadata_patch));
+  }
+
+  if (fields.length === 0) return findPublisherById(publisherId);
+
+  values.push(publisherId);
+  await query(
+    `UPDATE publishers SET ${fields.join(', ')}, updated_at = NOW() WHERE id = $${values.length}`,
+    values
+  );
+  return findPublisherById(publisherId);
+}
+
 export async function findPublisherWallet(publisherId: string): Promise<PublisherWalletRecord | null> {
   const result = await query<PublisherWalletRecord>(
     'SELECT * FROM wallets WHERE publisher_id = $1 LIMIT 1',
     [publisherId]
   );
   return result.rows[0] || null;
+}
+
+export async function ensurePublisherWallet(publisherId: string): Promise<PublisherWalletRecord> {
+  const result = await query<PublisherWalletRecord>(
+    `INSERT INTO wallets (publisher_id, currency, available_balance, pending_balance, withdrawn_balance, hold_balance, reserved_balance, created_at, updated_at)
+     VALUES ($1, 'USD', 0, 0, 0, 0, 0, NOW(), NOW())
+     ON CONFLICT (publisher_id) DO UPDATE SET updated_at = wallets.updated_at
+     RETURNING *`,
+    [publisherId]
+  );
+  return result.rows[0];
 }
 
 export async function findPublisherApplicationsByPublisher(publisherId: string): Promise<OfferApplicationRecord[]> {
@@ -287,11 +341,25 @@ export async function findManagersForAssignment(): Promise<ManagerRecord[]> {
   const result = await query<ManagerRecord>(
     `SELECT id, full_name, email, role
      FROM admins
-     WHERE is_active = TRUE
+     WHERE is_active = TRUE AND role = 'AFFILIATE_MANAGER'
      ORDER BY full_name ASC`,
     []
   );
   return result.rows;
+}
+
+export async function bulkAssignPublishers(
+  publisherIds: string[],
+  managerId: string | null
+): Promise<number> {
+  if (publisherIds.length === 0) return 0;
+  const placeholders = publisherIds.map((_, i) => `$${i + 2}`).join(', ');
+  const result = await query(
+    `UPDATE publishers SET assigned_manager_id = $1, updated_at = NOW()
+     WHERE id IN (${placeholders})`,
+    [managerId, ...publisherIds]
+  );
+  return result.rowCount ?? 0;
 }
 
 export async function findAdminById(adminId: string): Promise<ManagerRecord | null> {
@@ -367,4 +435,28 @@ export async function insertPublisherByAdmin(payload: AdminCreatePublisherPayloa
     total_revenue: '0',
     total_payout: '0',
   };
+}
+
+export interface PublisherManagerInfo {
+  affiliate_code: string;
+  manager_id: string | null;
+  manager_full_name: string | null;
+  manager_email: string | null;
+  manager_settings: { telegram?: string | null; teams?: string | null } | null;
+}
+
+export async function getPublisherManagerInfo(publisherId: string): Promise<PublisherManagerInfo | null> {
+  const result = await query<PublisherManagerInfo>(
+    `SELECT
+       p.affiliate_code,
+       a.id AS manager_id,
+       a.full_name AS manager_full_name,
+       a.email AS manager_email,
+       a.settings AS manager_settings
+     FROM publishers p
+     LEFT JOIN admins a ON a.id = p.assigned_manager_id AND a.role = 'AFFILIATE_MANAGER'
+     WHERE p.id = $1`,
+    [publisherId]
+  );
+  return result.rows[0] ?? null;
 }

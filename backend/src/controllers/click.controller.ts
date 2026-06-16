@@ -19,7 +19,15 @@ export async function trackClick(req: Request, res: Response, next: NextFunction
       String(referrer ?? '')
     );
     res.redirect(302, redirectUrl);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === "TARGETING_BLOCKED") {
+      res.status(403).json({ success: false, reason: "TARGETING_BLOCKED", message: error.message });
+      return;
+    }
+    if (error?.code === "CLICK_CAP_REACHED") {
+      res.status(429).json({ success: false, reason: "CLICK_CAP_REACHED", message: error.message });
+      return;
+    }
     next(error);
   }
 }

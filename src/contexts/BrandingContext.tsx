@@ -8,6 +8,10 @@ export interface BrandingConfig {
   logoUrl: string | null;
   faviconUrl: string | null;
   loginBgUrl: string | null;
+  loginDomain: string | null;
+  supportEmail: string | null;
+  turnstileEnabled: boolean;
+  turnstileSiteKey: string;
 }
 
 const DEFAULT_BRANDING: BrandingConfig = {
@@ -16,6 +20,10 @@ const DEFAULT_BRANDING: BrandingConfig = {
   logoUrl: null,
   faviconUrl: null,
   loginBgUrl: null,
+  loginDomain: null,
+  supportEmail: null,
+  turnstileEnabled: false,
+  turnstileSiteKey: "",
 };
 
 const BrandingContext = createContext<BrandingConfig>(DEFAULT_BRANDING);
@@ -27,11 +35,15 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
     getPublicBranding()
       .then((data) => {
         setBranding({
-          networkName: data.networkName || DEFAULT_BRANDING.networkName,
-          trackingDomain: data.trackingDomain || DEFAULT_BRANDING.trackingDomain,
-          logoUrl: data.logoUrl || null,
-          faviconUrl: data.faviconUrl || null,
-          loginBgUrl: data.loginBgUrl || null,
+          networkName:      data.networkName     || DEFAULT_BRANDING.networkName,
+          trackingDomain:   data.trackingDomain  || DEFAULT_BRANDING.trackingDomain,
+          logoUrl:          data.logoUrl         || null,
+          faviconUrl:       data.faviconUrl      || null,
+          loginBgUrl:       data.loginBgUrl      || null,
+          loginDomain:      data.loginDomain     || null,
+          supportEmail:     data.supportEmail    || null,
+          turnstileEnabled: data.turnstileEnabled ?? false,
+          turnstileSiteKey: data.turnstileSiteKey ?? "",
         });
       })
       .catch(() => {

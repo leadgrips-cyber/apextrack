@@ -1,27 +1,46 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Wallet, DollarSign, ArrowUpRight, CheckCircle, RefreshCw, AlertCircle, ShieldCheck, Landmark } from "lucide-react";
-import { DEMO_TRANSACTIONS } from "../data/publisherDemo";
+import * as publisherApi from "../services/publisherAnalytics";
+import type { PublisherWalletTxRow } from "../services/publisherAnalytics";
 
 export function WalletView() {
-  // Balance state trackers
-  const [availableBalance, setAvailableBalance] = useState(3390.80);
-  const [pendingBalance, setPendingBalance] = useState(450.00);
-  const [paidBalance, setPaidBalance] = useState(18480.00);
+  // Balance state trackers — populated from real wallet API
+  const [availableBalance, setAvailableBalance] = useState(0);
+  const [pendingBalance, setPendingBalance] = useState(0);
+  const [paidBalance, setPaidBalance] = useState(0);
+  const [txRows, setTxRows] = useState<PublisherWalletTxRow[]>([]);
+  const [walletLoading, setWalletLoading] = useState(true);
+
+  useEffect(() => {
+    setWalletLoading(true);
+    Promise.all([
+      publisherApi.getPublisherWalletBalance(),
+      publisherApi.getPublisherWalletTransactions({ page: 1, pageSize: 50 }),
+    ])
+      .then(([wallet, txResult]) => {
+        setAvailableBalance(Number(wallet.available_balance));
+        setPendingBalance(Number(wallet.pending_balance));
+        setPaidBalance(Number(wallet.withdrawn_balance));
+        setTxRows(txResult.rows);
+      })
+      .catch(() => {})
+      .finally(() => setWalletLoading(false));
+  }, []);
 
   // Dynamic payment fields states
   const [paymentMethod, setPaymentMethod] = useState("PayPal");
   
   // PayPal field
-  const [paypalEmail, setPaypalEmail] = useState("paypal-payee@highconvmedia.com");
+  const [paypalEmail, setPaypalEmail] = useState("");
   // Payoneer field
-  const [payoneerEmail, setPayoneerEmail] = useState("payoneer-payee@highconvmedia.com");
+  const [payoneerEmail, setPayoneerEmail] = useState("");
   // USDT field
-  const [usdtAddress, setUsdtAddress] = useState("TY981zXaBv7pQLk881mQpn9421H902ZpE2");
+  const [usdtAddress, setUsdtAddress] = useState("");
   // Wire fields
-  const [wireBankName, setWireBankName] = useState("Chase Manhattan Bank");
-  const [wireAccountNumber, setWireAccountNumber] = useState("9981-2244-1029-90");
-  const [wireSwiftCode, setWireSwiftCode] = useState("CHASUS33XXX");
-  const [wireBeneficiaryName, setWireBeneficiaryName] = useState("John Doe Media INC");
+  const [wireBankName, setWireBankName] = useState("");
+  const [wireAccountNumber, setWireAccountNumber] = useState("");
+  const [wireSwiftCode, setWireSwiftCode] = useState("");
+  const [wireBeneficiaryName, setWireBeneficiaryName] = useState("");
 
   // General configuration state
   const [minDisbursement, setMinDisbursement] = useState("100");
@@ -397,36 +416,54 @@ export function WalletView() {
           Historic Account Transactions Ledger
         </h3>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left divide-y theme-border">
-            <thead className="theme-table-header text-[10px] font-mono uppercase theme-text-muted tracking-wider">
-              <tr>
-                <th className="px-4 py-3 border-b theme-border">Trans Id</th>
-                <th className="px-4 py-3 border-b theme-border">Posting Date</th>
-                <th className="px-4 py-3 border-b theme-border">Description Notes</th>
-                <th className="px-4 py-3 border-b theme-border text-center">Operation Status</th>
-                <th className="px-4 py-3 border-b theme-border text-right">Sum (USD)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y theme-border text-xs text-slate-700 dark:text-slate-300">
-              {DEMO_TRANSACTIONS.map((tx) => (
-                <tr key={tx.id} className="hover:bg-slate-50 dark:hover:bg-slate-950/20 font-mono">
-                  <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{tx.id}</td>
-                  <td className="px-4 py-3 theme-text-muted whitespace-nowrap">{tx.date}</td>
-                  <td className="px-4 py-3 theme-text-secondary font-sans leading-snug">{tx.notes}</td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="inline-block text-[9px] font-bold px-2 py-0.5 rounded-full capitalize bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900">
-                      {tx.status}
-                    </span>
-                  </td>
-                  <td className={`px-4 py-3 text-right font-black ${tx.amount > 0 ? "text-emerald-600" : "text-rose-600 dark:text-rose-400"}`}>
-                    {tx.amount > 0 ? `+$${tx.amount.toFixed(2)}` : `-$${Math.abs(tx.amount).toFixed(2)}`}
-                  </td>
+        {walletLoading ? (
+          <div className="flex items-center gap-2 py-6 text-sm theme-text-muted font-mono">
+            <RefreshCw className="w-4 h-4 animate-spin text-cyan-500" /> Loading transaction history…
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left divide-y theme-border">
+              <thead className="theme-table-header text-[10px] font-mono uppercase theme-text-muted tracking-wider">
+                <tr>
+                  <th className="px-4 py-3 border-b theme-border">Trans Id</th>
+                  <th className="px-4 py-3 border-b theme-border">Posting Date</th>
+                  <th className="px-4 py-3 border-b theme-border">Description Notes</th>
+                  <th className="px-4 py-3 border-b theme-border text-center">Type</th>
+                  <th className="px-4 py-3 border-b theme-border text-right">Amount (USD)</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y theme-border text-xs text-slate-700 dark:text-slate-300">
+                {txRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center theme-text-muted text-xs uppercase font-semibold">
+                      No transactions recorded yet.
+                    </td>
+                  </tr>
+                ) : txRows.map((tx) => {
+                  const amt = Number(tx.amount);
+                  const isCredit = amt >= 0;
+                  return (
+                    <tr key={tx.id} className="hover:bg-slate-50 dark:hover:bg-slate-950/20 font-mono">
+                      <td className="px-4 py-3 font-bold text-slate-900 dark:text-white text-[10px]">{tx.id.slice(0, 8)}…</td>
+                      <td className="px-4 py-3 theme-text-muted whitespace-nowrap text-[10px]">
+                        {new Date(tx.created_at).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </td>
+                      <td className="px-4 py-3 theme-text-secondary font-sans leading-snug text-[11px]">{tx.description}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="inline-block text-[9px] font-bold px-2 py-0.5 rounded-full capitalize bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900">
+                          {tx.transaction_type.toLowerCase()}
+                        </span>
+                      </td>
+                      <td className={`px-4 py-3 text-right font-black ${isCredit ? "text-emerald-600" : "text-rose-600 dark:text-rose-400"}`}>
+                        {isCredit ? `+$${amt.toFixed(2)}` : `-$${Math.abs(amt).toFixed(2)}`}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
     </div>

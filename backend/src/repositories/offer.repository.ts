@@ -65,6 +65,8 @@ export async function findOffers(filters: OfferFilterParams = {}): Promise<Offer
 }
 
 export async function insertOffer(payload: OfferCreatePayload & { created_by_admin_id: string | null }): Promise<OfferRecord> {
+  const affiliatePayout = payload.affiliate_payout ?? payload.payout_amount;
+  const advertiserPayout = payload.advertiser_payout ?? affiliatePayout;
   const result = await query<OfferRecord>(
     `INSERT INTO offers (
        name,
@@ -74,11 +76,15 @@ export async function insertOffer(payload: OfferCreatePayload & { created_by_adm
        requires_publisher_approval,
        payout_type,
        payout_amount,
+       advertiser_payout,
+       affiliate_payout,
        currency,
        target_geos,
        target_devices,
        landing_page_url,
        preview_url,
+       offer_logo_url,
+       conversion_approval_mode,
        terms,
        caps,
        traffic_rules,
@@ -89,7 +95,7 @@ export async function insertOffer(payload: OfferCreatePayload & { created_by_adm
        created_by_admin_id,
        created_at,
        updated_at
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,NOW(),NOW())
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,NOW(),NOW())
      RETURNING id`,
     [
       payload.name,
@@ -98,12 +104,16 @@ export async function insertOffer(payload: OfferCreatePayload & { created_by_adm
       payload.status || 'DRAFT',
       payload.requires_publisher_approval ?? false,
       payload.payout_type,
-      payload.payout_amount,
+      affiliatePayout,
+      advertiserPayout,
+      affiliatePayout,
       payload.currency || 'USD',
       payload.target_geos || [],
       payload.target_devices || [],
       payload.landing_page_url,
       payload.preview_url || null,
+      payload.offer_logo_url || null,
+      payload.conversion_approval_mode || 'AUTO_APPROVE',
       payload.terms || null,
       payload.caps || null,
       payload.traffic_rules || null,
@@ -135,11 +145,15 @@ export async function updateOfferById(offerId: number, updates: OfferUpdatePaylo
   if (updates.requires_publisher_approval !== undefined) addField('requires_publisher_approval', updates.requires_publisher_approval);
   if (updates.payout_type !== undefined) addField('payout_type', updates.payout_type);
   if (updates.payout_amount !== undefined) addField('payout_amount', updates.payout_amount);
+  if (updates.advertiser_payout !== undefined) addField('advertiser_payout', updates.advertiser_payout);
+  if (updates.affiliate_payout  !== undefined) addField('affiliate_payout',  updates.affiliate_payout);
   if (updates.currency !== undefined) addField('currency', updates.currency);
   if (updates.target_geos !== undefined) addField('target_geos', updates.target_geos);
   if (updates.target_devices !== undefined) addField('target_devices', updates.target_devices);
   if (updates.landing_page_url !== undefined) addField('landing_page_url', updates.landing_page_url);
   if (updates.preview_url !== undefined) addField('preview_url', updates.preview_url);
+  if (updates.offer_logo_url !== undefined) addField('offer_logo_url', updates.offer_logo_url ?? null);
+  if (updates.conversion_approval_mode !== undefined) addField('conversion_approval_mode', updates.conversion_approval_mode);
   if (updates.terms !== undefined) addField('terms', updates.terms);
   if (updates.caps !== undefined) addField('caps', updates.caps);
   if (updates.traffic_rules !== undefined) addField('traffic_rules', updates.traffic_rules);
@@ -171,4 +185,69 @@ export async function updateOfferStatus(offerId: number, status: string): Promis
 
 export async function archiveOfferById(offerId: number): Promise<OfferRecord | null> {
   return updateOfferStatus(offerId, 'ARCHIVED');
+}
+
+export interface OfferSummary {
+  pending_affiliates: number;
+  approved_affiliates: number;
+  rejected_affiliates: number;
+  total_affiliates: number;
+  assigned_publishers: number;
+  active_events: number;
+  clicks_total: number;
+  conversions_total: number;
+  revenue_total: number;
+  payout_total: number;
+  profit_total: number;
+}
+
+export async function getOfferSummary(offerId: number): Promise<OfferSummary> {
+  const [affiliateResult, assignmentResult, eventResult, perfResult] = await Promise.all([
+    query<{ status: string; count: string }>(
+      `SELECT status, COUNT(*) AS count FROM offer_applications WHERE offer_id = $1 GROUP BY status`,
+      [offerId]
+    ),
+    query<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM offer_publisher_assignments WHERE offer_id = $1`,
+      [offerId]
+    ),
+    query<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM offer_events WHERE offer_id = $1 AND is_active = TRUE`,
+      [offerId]
+    ),
+    query<{ clicks: string; conversions: string; revenue: string; payout: string }>(
+      `SELECT
+        (SELECT COUNT(*) FROM clicks WHERE offer_id = $1) AS clicks,
+        (SELECT COUNT(*) FROM conversions WHERE offer_id = $1 AND conversion_status <> 'REJECTED') AS conversions,
+        COALESCE((SELECT SUM(revenue_amount) FROM conversions WHERE offer_id = $1 AND conversion_status = 'APPROVED'), 0) AS revenue,
+        COALESCE((SELECT SUM(payout_amount)  FROM conversions WHERE offer_id = $1 AND conversion_status = 'APPROVED'), 0) AS payout`,
+      [offerId]
+    ),
+  ]);
+
+  const counts = { pending: 0, approved: 0, rejected: 0 };
+  for (const row of affiliateResult.rows) {
+    const s = row.status.toUpperCase();
+    if (s === 'PENDING') counts.pending = Number(row.count);
+    else if (s === 'APPROVED') counts.approved = Number(row.count);
+    else if (s === 'REJECTED') counts.rejected = Number(row.count);
+  }
+
+  const perf = perfResult.rows[0];
+  const revenue = Number(perf?.revenue ?? 0);
+  const payout = Number(perf?.payout ?? 0);
+
+  return {
+    pending_affiliates: counts.pending,
+    approved_affiliates: counts.approved,
+    rejected_affiliates: counts.rejected,
+    total_affiliates: counts.pending + counts.approved + counts.rejected,
+    assigned_publishers: Number(assignmentResult.rows[0]?.count ?? 0),
+    active_events: Number(eventResult.rows[0]?.count ?? 0),
+    clicks_total: Number(perf?.clicks ?? 0),
+    conversions_total: Number(perf?.conversions ?? 0),
+    revenue_total: revenue,
+    payout_total: payout,
+    profit_total: revenue - payout,
+  };
 }

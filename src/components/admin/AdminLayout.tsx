@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Search, Plus, Menu, X, LogOut, ArrowLeft } from "lucide-react";
 import { AdminSidebar } from "./AdminSidebar";
+import { useBranding } from "../../contexts/BrandingContext";
 
 interface AdminLayoutProps {
   activeSection: string;
@@ -22,6 +23,7 @@ export function AdminLayout({
   children,
 }: AdminLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const branding = useBranding();
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
@@ -44,7 +46,7 @@ export function AdminLayout({
             </button>
             <div className="flex flex-col text-sm">
               <span className="font-black theme-text-main uppercase tracking-[0.22em] text-slate-900 dark:text-white">
-                Admin Panel
+                {branding.networkName}
               </span>
               <span className="text-[10px] theme-text-muted uppercase tracking-wider font-mono">
                 {adminName}

@@ -10,6 +10,9 @@ import {
   handleGetRecentPostbacks,
   handleGetRevenueByOffer,
   handleGetRevenueTransactions,
+  handleGetClickReport,
+  handleGetConversionReport,
+  handleGetDailyReport,
 } from "../controllers/analytics.controller.js";
 import {
   handleGetPayoutsSummary,
@@ -39,6 +42,10 @@ router.get('/dashboard/top-publishers', handleGetTopPublishers);
 router.get('/dashboard/top-offers', handleGetTopOffers);
 router.get('/dashboard/recent-conversions', handleGetRecentConversions);
 router.get('/dashboard/recent-postbacks', handleGetRecentPostbacks);
+
+router.get('/reports/clicks', handleGetClickReport);
+router.get('/reports/conversions', handleGetConversionReport);
+router.get('/reports/daily', handleGetDailyReport);
 
 router.get('/finance/revenue-by-offer', handleGetRevenueByOffer);
 router.get('/finance/transactions', handleGetRevenueTransactions);

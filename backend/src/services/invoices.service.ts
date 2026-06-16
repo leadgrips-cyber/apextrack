@@ -11,6 +11,8 @@ import {
   type InvoiceRow,
   type InvoicesSummary,
 } from "../repositories/invoices.repository.js";
+import { query } from "../db/index.js";
+import { sendTemplateEmail } from "./mailer.service.js";
 
 export type { InvoiceRow, InvoicesSummary };
 
@@ -57,7 +59,7 @@ export async function createNewInvoice(params: {
   const netAmount     = Number((params.grossAmount - params.feeAmount).toFixed(2));
   const invoiceNumber = await generateInvoiceNumber();
 
-  return createInvoice({
+  const invoice = await createInvoice({
     invoiceNumber,
     publisherId:  params.publisherId,
     periodStart:  params.periodStart,
@@ -68,6 +70,24 @@ export async function createNewInvoice(params: {
     payoutMethod: params.payoutMethod,
     notes:        params.notes,
   });
+
+  // Non-blocking: notify affiliate of new invoice
+  query<{ email: string; full_name: string }>(
+    `SELECT email, full_name FROM publishers WHERE id = $1 LIMIT 1`,
+    [params.publisherId]
+  ).then(({ rows }) => {
+    const pub = rows[0];
+    if (!pub) return;
+    const firstName = (pub.full_name ?? '').split(' ')[0] ?? '';
+    sendTemplateEmail(pub.email, 'affiliate_invoice', {
+      first_name:     firstName,
+      email:          pub.email,
+      invoice_number: invoice.invoice_number,
+      amount:         `$${invoice.net_amount}`,
+    }).catch(() => {});
+  }).catch(() => {});
+
+  return invoice;
 }
 
 export async function payInvoice(params: {

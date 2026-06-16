@@ -6,6 +6,7 @@ import {
   handleApprovePublisher,
   handleAssignManager,
   handleBlockPublisher,
+  handleBulkAssign,
   handleGetPublisherDetails,
   handleGetPublisherWallet,
   handleListManagers,
@@ -13,7 +14,9 @@ import {
   handleListPublisherTrackingLinks,
   handleListPublishers,
   handleReactivatePublisher,
+  handleRejectPublisher,
   handleSuspendPublisher,
+  handleUpdatePublisherProfile,
 } from "../controllers/publisher.controller.js";
 
 const router = Router();
@@ -25,14 +28,17 @@ router.post('/', handleAdminCreatePublisher);
 
 // Static sub-paths must come before /:id to avoid param collision
 router.get('/managers', handleListManagers);
+router.patch('/bulk-assign', handleBulkAssign);
 
 router.get('/:id', handleGetPublisherDetails);
 router.patch('/:id/approve', handleApprovePublisher);
+router.patch('/:id/reject', handleRejectPublisher);
 router.patch('/:id/suspend', handleSuspendPublisher);
 router.patch('/:id/reactivate', handleReactivatePublisher);
 router.patch('/:id/block', handleBlockPublisher);
 router.patch('/:id/assign-manager', handleAssignManager);
 router.get('/:id/wallet', handleGetPublisherWallet);
+router.patch('/:id/profile', handleUpdatePublisherProfile);
 router.get('/:id/applications', handleListPublisherApplications);
 router.get('/:id/tracking-links', handleListPublisherTrackingLinks);
 

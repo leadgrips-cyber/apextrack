@@ -6,8 +6,10 @@ import {
   handleCreateOffer,
   handleDeleteOffer,
   handleGetOfferDetails,
+  handleGetOfferSummary,
   handleListOffers,
   handlePauseOffer,
+  handleRejectOffer,
   handleUpdateOffer,
 } from "../controllers/offer.controller.js";
 
@@ -20,10 +22,12 @@ router.get('/', handleListOffers);
 router.get('/:id', handleGetOfferDetails);
 
 // Admin only
+router.get('/:id/summary', authorizeRoles('admin'), handleGetOfferSummary);
 router.post('/', authorizeRoles('admin'), handleCreateOffer);
 router.put('/:id', authorizeRoles('admin'), handleUpdateOffer);
 router.patch('/:id/pause', authorizeRoles('admin'), handlePauseOffer);
 router.patch('/:id/activate', authorizeRoles('admin'), handleActivateOffer);
+router.patch('/:id/reject', authorizeRoles('admin'), handleRejectOffer);
 router.delete('/:id', authorizeRoles('admin'), handleDeleteOffer);
 
 export default router;

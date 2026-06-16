@@ -1,7 +1,10 @@
 import { advertiserConversionStats } from "./advertiserDemoData";
 import { Copy, Link2, ShieldCheck } from "lucide-react";
+import { useBranding } from "../../contexts/BrandingContext";
 
 export function AdvertiserConversionTrackingView() {
+  const branding = useBranding();
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
@@ -19,7 +22,7 @@ export function AdvertiserConversionTrackingView() {
         <div className="flex items-center justify-between gap-4">
           <div>
             <div className="text-xs uppercase tracking-[0.24em] font-bold theme-text-muted">Postback URL</div>
-            <div className="mt-2 text-sm theme-text-main">Use this URL to send conversion events back to ApexTrack.</div>
+            <div className="mt-2 text-sm theme-text-main">Use this URL to send conversion events back to {branding.networkName}.</div>
           </div>
           <button className="rounded-full border theme-border px-4 py-2 text-xs font-semibold theme-text-secondary hover:theme-text-main transition inline-flex items-center gap-2">
             <Copy className="w-4 h-4" />
@@ -27,7 +30,7 @@ export function AdvertiserConversionTrackingView() {
           </button>
         </div>
         <div className="mt-4 rounded-3xl bg-slate-50 dark:bg-slate-900 border theme-border p-4 text-sm font-mono text-slate-700 dark:text-slate-300">
-          https://tracking.apextrack.net/postback?campaign_id=CAMPAIGN_ID&amp;click_id=CLICK_ID&amp;status=conversion&amp;payout=AMOUNT
+          {branding.trackingDomain}/postback?campaign_id=CAMPAIGN_ID&amp;click_id=CLICK_ID&amp;status=conversion&amp;payout=AMOUNT
         </div>
       </section>
 

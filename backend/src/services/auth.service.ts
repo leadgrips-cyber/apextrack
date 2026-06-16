@@ -1,5 +1,6 @@
 import { comparePassword, hashPassword } from "../utils/hash.js";
 import { signJwt } from "../utils/jwt.js";
+import { query } from "../db/index.js";
 import {
   AdminRecord,
   AuthResponse,
@@ -10,6 +11,8 @@ import {
   UserRole,
 } from "../types/auth.js";
 import * as authRepository from "../repositories/auth.repository.js";
+import { sendVerificationEmail } from "./verification.service.js";
+import { sendTemplateEmail } from "./mailer.service.js";
 
 function buildAuthPayload(userId: string, role: UserRole, email: string): AuthTokenPayload {
   return { sub: userId, role, email, issuedAt: Math.floor(Date.now() / 1000), expiresAt: 0 };
@@ -39,6 +42,58 @@ export async function login(request: LoginRequest): Promise<AuthResponse> {
     throw new Error('Invalid credentials');
   }
 
+  // Publisher-specific status checks — must happen AFTER password verification
+  // to avoid leaking account existence information
+  if (request.role === 'publisher') {
+    const pubUser = user as PublisherRecord;
+    const status = pubUser.account_status;
+
+    if (status === 'PENDING') {
+      const err = Object.assign(
+        new Error('Your account is pending approval. Please wait for an administrator to review your application.'),
+        { code: 'ACCOUNT_PENDING' }
+      );
+      throw err;
+    }
+    if (status === 'REJECTED' || status === 'DEACTIVATED') {
+      const err = Object.assign(
+        new Error('Your application has been rejected. Please contact support for more information.'),
+        { code: 'ACCOUNT_REJECTED' }
+      );
+      throw err;
+    }
+    if (status === 'SUSPENDED') {
+      const err = Object.assign(
+        new Error('Your account has been suspended. Please contact support.'),
+        { code: 'ACCOUNT_SUSPENDED' }
+      );
+      throw err;
+    }
+    if (status !== 'ACTIVE') {
+      throw new Error('Account is disabled');
+    }
+  }
+
+  // Check email verification for publishers when required
+  if (request.role === 'publisher') {
+    const pubUser = user as PublisherRecord;
+    if (!pubUser.email_verified) {
+      const netResult = await query<{ email_verification_required: boolean }>(
+        `SELECT email_verification_required FROM network_settings WHERE id = 1 LIMIT 1`
+      );
+      const required = netResult.rows[0]?.email_verification_required ?? false;
+      if (required) {
+        const err = new Error('Please verify your email address before logging in') as Error & {
+          code: string;
+          email: string;
+        };
+        err.code = 'EMAIL_NOT_VERIFIED';
+        err.email = request.email;
+        throw err;
+      }
+    }
+  }
+
   if (request.role === 'admin') {
     await authRepository.markAdminLastLogin(user.id);
   } else {
@@ -62,7 +117,14 @@ export async function register(request: RegisterRequest): Promise<PublisherRecor
   }
 
   const passwordHash = await hashPassword(request.password);
-  return authRepository.createPublisher(request, passwordHash);
+  const publisher = await authRepository.createPublisher(request, passwordHash);
+
+  // Non-blocking: send verification + signup notification; failures must not block account creation
+  const firstName = (request.fullName ?? '').split(' ')[0] ?? '';
+  sendVerificationEmail('publisher', publisher.id, publisher.email, firstName).catch(() => {});
+  sendTemplateEmail(publisher.email, 'affiliate_signup', { first_name: firstName, email: publisher.email }).catch(() => {});
+
+  return publisher;
 }
 
 export async function updateProfile(

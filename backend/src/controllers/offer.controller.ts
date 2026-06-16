@@ -4,17 +4,19 @@ import {
   createOffer,
   activateOffer,
   archiveOffer,
+  rejectOffer,
   getOfferDetails,
   listOffers,
   pauseOffer,
   updateOffer,
 } from "../services/offer.service.js";
 import { OfferCreatePayload, OfferFilterParams, OfferRecord, OfferUpdatePayload, OfferStatus } from "../types/offer.js";
+import { getOfferSummary } from "../repositories/offer.repository.js";
 
 // Strip advertiser and internal fields before returning data to publisher role.
-// Publishers must never see advertiser_id, advertiser_name, admin_notes, or created_by_admin_id.
-function toPublisherOffer(offer: OfferRecord): Omit<OfferRecord, 'advertiser_id' | 'advertiser_name' | 'admin_notes' | 'created_by_admin_id'> {
-  const { advertiser_id, advertiser_name, admin_notes, created_by_admin_id, ...safe } = offer;
+// Publishers must never see advertiser_id, advertiser_name, admin_notes, created_by_admin_id, or conversion_approval_mode.
+function toPublisherOffer(offer: OfferRecord): Omit<OfferRecord, 'advertiser_id' | 'advertiser_name' | 'admin_notes' | 'created_by_admin_id' | 'conversion_approval_mode'> {
+  const { advertiser_id, advertiser_name, admin_notes, created_by_admin_id, conversion_approval_mode, ...safe } = offer;
   return safe;
 }
 
@@ -83,6 +85,20 @@ export async function handleActivateOffer(req: AuthRequest, res: Response, next:
   }
 }
 
+export async function handleRejectOffer(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const offerId = Number(req.params.id);
+    if (!offerId || Number.isNaN(offerId)) {
+      res.status(400).json({ message: 'Invalid offer id' });
+      return;
+    }
+    const offer = await rejectOffer(offerId);
+    res.json({ offer });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function handleDeleteOffer(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const offerId = Number(req.params.id);
@@ -113,6 +129,20 @@ export async function handleGetOfferDetails(req: AuthRequest, res: Response, nex
       return;
     }
     res.json({ offer: isPublisher ? toPublisherOffer(offer) : offer });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function handleGetOfferSummary(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const offerId = Number(req.params.id);
+    if (!offerId || Number.isNaN(offerId)) {
+      res.status(400).json({ message: 'Invalid offer id' });
+      return;
+    }
+    const summary = await getOfferSummary(offerId);
+    res.json(summary);
   } catch (error) {
     next(error);
   }

@@ -574,7 +574,7 @@ export function MySqlArchitectureTab() {
           {/* Columns Specifications Grid */}
           <div className="space-y-2">
             <strong className="text-slate-400 text-xs font-semibold uppercase tracking-wide block flex items-center gap-1.5">
-              < sliders className="w-4 h-4 text-cyan-400" />
+              <Sliders className="w-4 h-4 text-cyan-400" />
               Column Definitions & Constrains Matrix
             </strong>
 

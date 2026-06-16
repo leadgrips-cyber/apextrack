@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useBranding } from "./contexts/BrandingContext";
-import { AdminNetworkSettingsView } from "./components/admin";
 import * as authApi from "./services/auth";
 import { PublisherAuth } from "./components/PublisherAuth";
+import { AdvertiserSignupView } from "./components/AdvertiserSignupView";
 import { PublisherSidebar } from "./components/PublisherSidebar";
 import { PublisherDashboardView } from "./components/PublisherDashboardView";
 import { OfferMarketplaceView } from "./components/OfferMarketplaceView";
@@ -13,10 +13,9 @@ import { ApiAccessView } from "./components/ApiAccessView";
 import { ReportsView } from "./components/ReportsView";
 import { WalletView } from "./components/WalletView";
 import { InvoicesView } from "./components/InvoicesView";
-import { InvoiceDetailModal } from "./components/InvoiceDetailModal";
 import { ProfileSettingsView } from "./components/ProfileSettingsView";
-import { NotificationsView, PublisherNotification } from "./components/NotificationsView";
-import { AnnouncementsView, NetworkAnnouncement } from "./components/AnnouncementsView";
+import { NotificationsView } from "./components/NotificationsView";
+import { NotificationBell } from "./components/NotificationBell";
 import {
   AdminLayout,
   AdminDashboardView as AdminDashboardUI,
@@ -26,31 +25,44 @@ import {
   AffiliateProfileView,
   AffiliateCreateView,
   AffiliatePostbacksView,
-  AffiliateBillingView,
   PostbackTestView,
   ManagerListView,
   ManagerCreateView,
   ManagerAssignView,
-  ManagerPerformanceView as AdminManagerPerformanceView,
   AdvertiserListView,
   AdvertiserCreateView,
-  AdvertiserBillingView,
-  AdvertiserReportsView,
   ReportsDailyView,
   ReportsClickView,
   ReportsConversionView,
   FinanceRevenueView,
   FinancePayoutsView,
   FinanceInvoicesView,
-  SystemSettingsView,
+  FinanceTransactionsView,
+  ConversionReviewView,
+  OfferPostbacksView,
+  AdvertiserPostbackLogsView,
+  AffiliatePostbackLogsView,
+  AdvertiserPostbackGeneratorView,
+  AdminAnnouncementsView,
+  OfferCategoriesView,
+  SignupQuestionsView,
+  SmtpSettingsView,
+  EmailTemplatesView,
+  BulkMailerView,
+  EmailLogsView,
+  EmailVerificationSettingsView,
+  OfferCreateView,
+  AdminNetworkSettingsView,
 } from "./components/admin";
+import { VerifyEmailScreen } from "./components/VerifyEmailScreen";
+import { ResetPasswordScreen } from "./components/ResetPasswordScreen";
 import {
   ManagerLayout,
   ManagerDashboardView,
   ManagerPublisherReviewView,
   ManagerOfferApprovalView,
   ManagerCommunicationView,
-  ManagerPerformanceView,
+  ManagerNotesView,
 } from "./components/manager";
 import {
   AdvertiserLayout,
@@ -61,7 +73,6 @@ import {
   AdvertiserReportsView as AdvertiserPortalReportsView,
 } from "./components/advertiser";
 
-import { DEMO_INVOICES, DemoInvoice } from "./data/publisherDemo";
 import { 
   HelpCircle, 
   Menu, 
@@ -80,21 +91,26 @@ import {
 export default function App() {
   const branding = useBranding();
 
+  // Detect email verification token in URL (e.g., ?token=xxx)
+  const [verifyToken] = useState(() => new URLSearchParams(window.location.search).get("token"));
+  // Detect password reset token in URL (e.g., ?reset_token=xxx)
+  const [resetToken] = useState(() => new URLSearchParams(window.location.search).get("reset_token"));
+
   // Authentication & session simulation states
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<string>("");
-  const [authScreen, setAuthScreen] = useState<"login" | "register" | "forgot" | "verify">("login");
+  const [authScreen, setAuthScreen] = useState<"login" | "register" | "forgot" | "advertiser-signup">("login");
 
   // Navigation tabs of the authorized publisher portal
   // Maps to: dashboard, marketplace, my-offers, link-generator, postbacks, api-access, reports, wallet, invoices, profile, notifications, announcements
   const [activeScreen, setActiveScreen] = useState("dashboard");
+  const [userId, setUserId] = useState<string>("");
   const [isDark, setIsDark] = useState(false);
   
   // Custom deep campaign states
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
-  const [selectedInvoice, setSelectedInvoice] = useState<DemoInvoice | null>(null);
   const [selectedAffiliate, setSelectedAffiliate] = useState<any | null>(null);
-  const [publisherName, setPublisherName] = useState("John Doe Media INC");
+  const [publisherName, setPublisherName] = useState("");
 useEffect(() => {
   const loadUser = async () => {
     const token = localStorage.getItem("token");
@@ -111,7 +127,10 @@ useEffect(() => {
       setPublisherName(user.fullName || user.companyName || "Publisher");
       setUserRole(user.role);
       setIsLoggedIn(true);
-      if (user.role === "admin") {
+      if (user.role === "admin" && user.adminRole === "AFFILIATE_MANAGER") {
+        setUserId(user.id ?? "");
+        setActiveScreen("manager-dashboard");
+      } else if (user.role === "admin") {
         setActiveScreen("admin-dashboard");
       }
     } catch (error) {
@@ -190,155 +209,13 @@ useEffect(() => {
     };
 
     loadOffers();
-  }, []);
+  }, [isLoggedIn]);
 
-  // Statefully manage publisher notifications
-  const [notifications, setNotifications] = useState<PublisherNotification[]>(() => {
-    return [
-      {
-        id: "nt-1",
-        type: "approved",
-        title: "Offer Approved",
-        message: "Your application for campaign #1094 Apex Trading App was successfully approved by AM Sophia.",
-        timestamp: "2026-06-06 10:30",
-        isRead: false,
-        offerId: "1094"
-      },
-      {
-        id: "nt-2",
-        type: "rejected",
-        title: "Offer Rejected",
-        message: "Campaign #1097 SaaS Enterprise CRM access request was unfortunately rejected by management.",
-        timestamp: "2026-06-05 14:15",
-        isRead: false,
-        offerId: "1097",
-        rejectionReason: "Primary geographic traffic stream volume is originating from untested regional proxy node routes."
-      },
-      {
-        id: "nt-3",
-        type: "payout",
-        title: "Payout Released",
-        message: "A monthly wire disbursement of $2,850.00 USD was successfully executed to Citibank Account ending in *9981.",
-        timestamp: "2026-06-01 02:00",
-        isRead: true
-      },
-      {
-        id: "nt-4",
-        type: "paused",
-        title: "Offer Paused",
-        message: "Luxury Essentials campaign #1098 has been paused temporarily by the advertiser.",
-        timestamp: "2026-05-28 09:12",
-        isRead: true,
-        offerId: "1097"
-      },
-      {
-        id: "nt-5",
-        type: "activated",
-        title: "Offer Activated",
-        message: "KetoDiet Shred - CPS Health Offer #1096 has been activated for your tracking roster.",
-        timestamp: "2026-05-20 09:30",
-        isRead: true,
-        offerId: "1096"
-      },
-      {
-        id: "nt-6",
-        type: "announcement",
-        title: "System Announcements",
-        message: "Scheduled platform-wide indexing upgrades on the server core database have been planned.",
-        timestamp: "2026-05-15 13:00",
-        isRead: true
-      }
-    ];
-  });
-
-  // Statefully manage network announcements
-  const [announcements, setAnnouncements] = useState<NetworkAnnouncement[]>(() => {
-    return [
-      {
-        id: "an-1",
-        category: "Network News",
-        title: "Platform Upgrade: Click Attribution Engine v4.1 Deployed",
-        content: "We have fully upgraded our redirection proxy engine, achieving record conversion postback routing response times under 12 milliseconds across EU and US nodes. This prevents click loss during scaling windows.",
-        author: "Sophia Kovalski (AM Representative)",
-        timestamp: "2026-06-06 11:22",
-        isImportant: true
-      },
-      {
-        id: "an-2",
-        category: "New Offers",
-        title: "KetoDiet Shred Released with Exclusive 65% CPS Commission",
-        content: "A brand new global Nutra vertical KetoDiet Shred is now open for traffic mapping. High conversion rates observed in preliminary trial groups in US, CA, and EU.",
-        author: "AM Sophia",
-        timestamp: "2026-06-05 09:40",
-        isImportant: false
-      },
-      {
-        id: "an-3",
-        category: "Payout Updates",
-        title: "Invoicing Ledgers Successfully Reconciled for Net-15",
-        content: "Payout statements covering May affiliate earnings have been verified. Invoices are transit-locked and being scheduled for PayPal / Wire disbursement sweeps.",
-        author: "Billing Support",
-        timestamp: "2026-06-01 10:00",
-        isImportant: false
-      },
-      {
-        id: "an-4",
-        category: "Maintenance Notices",
-        title: "Scheduled Server Database Infrastructure Maintenance",
-        content: "Please note that server API networks will undergo indexing routine optimization on Sunday, June 7 from 03:00 to 05:00 UTC. Clicks will continue registering, but live visual dashboard syncs may experience temporary delays.",
-        author: "Sysadmin Team",
-        timestamp: "2026-05-29 18:00",
-        isImportant: false
-      },
-      {
-        id: "an-5",
-        category: "Compliance Alerts",
-        title: "Immediate Warning: Incentive Traffic Rules Violations",
-        content: "Affiliates are strictly warned against running incentivized virtual currencies, browser lockups, or duplicate IP email lists on standard financial Lead campaigns. Violating publishers will have their payout cleared revenue balance frozen.",
-        author: "Compliance Dept",
-        timestamp: "2026-05-20 14:10",
-        isImportant: true
-      }
-    ];
-  });
-
-  // Notifications operational triggers
-  const handleMarkAsRead = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-  };
-
-  const handleMarkAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-  };
-
-  const handleDeleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  };
-
-  const handleClearAllNotifications = () => {
-    setNotifications([]);
-  };
-
-  // Publisher submits announcement triggers
-  const handlePublishAnnouncement = (newAnn: Omit<NetworkAnnouncement, "id" | "timestamp">) => {
-    const formattedDate = new Date().toISOString().replace("T", " ").substring(0, 16);
-    const fresh: NetworkAnnouncement = {
-      ...newAnn,
-      id: "an-" + Date.now(),
-      timestamp: formattedDate
-    };
-    setAnnouncements(prev => [fresh, ...prev]);
-
-    // Add alert trigger companion notification as requested
-    const alertNotif: PublisherNotification = {
-      id: "nt-" + Date.now(),
-      type: "announcement",
-      title: `System Announcement: ${newAnn.title}`,
-      message: `${newAnn.content.substring(0, 120)}... published on affiliate dashboard.`,
-      timestamp: formattedDate,
-      isRead: false
-    };
-    setNotifications(prev => [alertNotif, ...prev]);
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("admin_token");
+    setIsLoggedIn(false);
+    setAuthScreen("login");
   };
 
   // Mobile menu visibility
@@ -366,22 +243,6 @@ useEffect(() => {
             setSelectedOfferId={setSelectedOfferId}
             offers={offers}
             setOffers={setOffers}
-            onAddNotification={(type, title, message, offerId, rejectionReason) => {
-              const formattedDate = new Date().toISOString().replace("T", " ").substring(0, 16);
-              setNotifications(prev => [
-                {
-                  id: "nt-" + Date.now(),
-                  type,
-                  title,
-                  message,
-                  timestamp: formattedDate,
-                  isRead: false,
-                  offerId,
-                  rejectionReason
-                },
-                ...prev
-              ]);
-            }}
           />
         );
       case "my-offers":
@@ -391,26 +252,10 @@ useEffect(() => {
               setSelectedOfferId(id);
               setActiveScreen("marketplace");
             }}
-            offers={offers}
           />
         );
       case "notifications":
-        return (
-          <NotificationsView
-            notifications={notifications}
-            onMarkAsRead={handleMarkAsRead}
-            onMarkAllAsRead={handleMarkAllAsRead}
-            onDeleteNotification={handleDeleteNotification}
-            onClearAll={handleClearAllNotifications}
-          />
-        );
-      case "announcements":
-        return (
-          <AnnouncementsView
-            announcements={announcements}
-            onPublishAnnouncement={handlePublishAnnouncement}
-          />
-        );
+        return <NotificationsView />;
       case "link-generator":
         return <TrackingLinkView offers={offers} />;
       case "postbacks":
@@ -434,11 +279,8 @@ useEffect(() => {
           <AdvertiserLayout
             activeSection={activeScreen}
             setActiveSection={setActiveScreen}
-            advertiserName="ApexTrack Advertiser"
-            onLogout={() => {
-              setIsLoggedIn(false);
-              setAuthScreen("login");
-            }}
+            advertiserName={publisherName || "Advertiser"}
+            onLogout={handleLogout}
             onReturnToPublisher={() => setActiveScreen("dashboard")}
           >
             {activeScreen === "advertiser-dashboard" && <AdvertiserDashboardView />}
@@ -452,23 +294,20 @@ useEffect(() => {
       case "manager-publishers":
       case "manager-offers-approval":
       case "manager-communication":
-      case "manager-performance":
+      case "manager-notes":
         return (
           <ManagerLayout
             activeSection={activeScreen}
             setActiveSection={setActiveScreen}
-            managerName="Affiliate Manager"
-            onLogout={() => {
-              setIsLoggedIn(false);
-              setAuthScreen("login");
-            }}
+            managerName={publisherName || "Manager"}
+            onLogout={handleLogout}
             onReturnToPublisher={() => setActiveScreen("dashboard")}
           >
-            {activeScreen === "manager-dashboard" && <ManagerDashboardView />}
-            {activeScreen === "manager-publishers" && <ManagerPublisherReviewView />}
-            {activeScreen === "manager-offers-approval" && <ManagerOfferApprovalView />}
-            {activeScreen === "manager-communication" && <ManagerCommunicationView />}
-            {activeScreen === "manager-performance" && <ManagerPerformanceView />}
+            {activeScreen === "manager-dashboard" && <ManagerDashboardView managerId={userId} />}
+            {activeScreen === "manager-publishers" && <ManagerPublisherReviewView managerId={userId} />}
+            {activeScreen === "manager-offers-approval" && <ManagerOfferApprovalView managerId={userId} />}
+            {activeScreen === "manager-communication" && <ManagerCommunicationView managerId={userId} />}
+            {activeScreen === "manager-notes" && <ManagerNotesView managerId={userId} />}
           </ManagerLayout>
         );
       default:
@@ -483,6 +322,36 @@ useEffect(() => {
     }
   };
 
+  // Standalone password reset screen: intercept before any auth/portal rendering
+  if (resetToken) {
+    return (
+      <div className={`min-h-screen ${isDark ? "dark" : ""} theme-bg-page theme-text-main font-sans`}>
+        <ResetPasswordScreen
+          token={resetToken}
+          onGoToLogin={() => {
+            window.history.pushState({}, "", "/");
+            window.location.reload();
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Standalone email verification screen: intercept before any auth/portal rendering
+  if (verifyToken) {
+    return (
+      <div className={`min-h-screen ${isDark ? "dark" : ""} theme-bg-page theme-text-main font-sans`}>
+        <VerifyEmailScreen
+          token={verifyToken}
+          onGoToLogin={() => {
+            window.history.pushState({}, "", "/");
+            window.location.reload();
+          }}
+        />
+      </div>
+    );
+  }
+
   // When a full admin/advertiser/manager panel is active, render it as a separate full-screen layout
   // and avoid mounting the Publisher sidebar or publisher shell.
   if (isLoggedIn && activeScreen.startsWith("admin-")) {
@@ -492,15 +361,12 @@ useEffect(() => {
           activeSection={activeScreen}
           setActiveSection={setActiveScreen}
           adminName={publisherName}
-          onLogout={() => {
-            setIsLoggedIn(false);
-            setAuthScreen("login");
-          }}
+          onLogout={handleLogout}
           onCreateOffer={() => setActiveScreen("admin-offer-create")}
         >
           {activeScreen === "admin-dashboard" && <AdminDashboardUI />}
           {activeScreen === "admin-offers" && <AdminOfferManagementView />}
-          {activeScreen === "admin-offer-create" && <AdminOfferManagementView openCreateOnMount />}
+          {activeScreen === "admin-offer-create" && <OfferCreateView />}
           {activeScreen === "admin-applications" && <AdminApplicationReviewView />}
           {activeScreen === "admin-affiliates-list" && <AffiliateListView onViewProfile={(affiliate) => { setSelectedAffiliate(affiliate); setActiveScreen("admin-affiliate-profile"); }} onCreateAffiliate={() => { console.log("NAVIGATE_TO_ADMIN_AFFILIATES_CREATE"); setActiveScreen("admin-affiliates-create"); }} />}
           {activeScreen === "admin-affiliate-profile" && selectedAffiliate && <AffiliateProfileView affiliate={selectedAffiliate} onBack={() => { setActiveScreen("admin-affiliates-list"); setSelectedAffiliate(null); }} />}
@@ -509,27 +375,33 @@ useEffect(() => {
           {activeScreen === "admin-affiliates-disabled" && <AffiliateListView title="Disabled Affiliates" subtitle="Affiliates that are currently suspended or restricted." initialStatusFilter="Disabled" onViewProfile={(affiliate) => { setSelectedAffiliate(affiliate); setActiveScreen("admin-affiliate-profile"); }} onCreateAffiliate={() => setActiveScreen("admin-affiliates-create")} />}
           {activeScreen === "admin-affiliates-create" && <AffiliateCreateView onSuccess={() => setActiveScreen("admin-affiliates-list")} />}
           {activeScreen === "admin-affiliates-postbacks" && <AffiliatePostbacksView />}
-          {activeScreen === "admin-affiliates-billing" && <AffiliateBillingView />}
           {activeScreen === "admin-postback-test" && <PostbackTestView />}
           {activeScreen === "admin-managers-list" && <ManagerListView />}
           {activeScreen === "admin-managers-create" && <ManagerCreateView />}
           {activeScreen === "admin-managers-assign" && <ManagerAssignView />}
-          {activeScreen === "admin-managers-performance" && <AdminManagerPerformanceView />}
-          {activeScreen === "admin-reports-overview" && <AdminDashboardUI />}
           {activeScreen === "admin-reports-daily" && <ReportsDailyView />}
           {activeScreen === "admin-reports-click" && <ReportsClickView />}
           {activeScreen === "admin-reports-conversion" && <ReportsConversionView />}
           {activeScreen === "admin-advertisers-list" && <AdvertiserListView onCreateNew={() => setActiveScreen("admin-advertisers-create")} />}
           {activeScreen === "admin-advertisers-create" && <AdvertiserCreateView onSuccess={() => setActiveScreen("admin-advertisers-list")} onCancel={() => setActiveScreen("admin-advertisers-list")} />}
-          {activeScreen === "admin-advertisers-billing" && <AdvertiserBillingView />}
-          {activeScreen === "admin-advertisers-reports" && <AdvertiserReportsView />}
           {activeScreen === "admin-finance-revenue" && <FinanceRevenueView />}
           {activeScreen === "admin-finance-payouts" && <FinancePayoutsView />}
           {activeScreen === "admin-finance-invoices" && <FinanceInvoicesView />}
-          {activeScreen === "admin-system-settings" && <SystemSettingsView />}
+          {activeScreen === "admin-finance-transactions" && <FinanceTransactionsView />}
           {activeScreen === "admin-network-settings" && <AdminNetworkSettingsView />}
-          {activeScreen === "admin-system-roles" && <SystemSettingsView title="Roles & Permissions" description="Placeholder for roles, permissions and access control workflows." />}
-          {activeScreen === "admin-system-audit" && <SystemSettingsView title="Audit Logs" description="Placeholder for audit trail and administrative event logs." />}
+          {activeScreen === "admin-announcements" && <AdminAnnouncementsView />}
+          {activeScreen === "admin-signup-questions" && <SignupQuestionsView />}
+          {activeScreen === "admin-smtp-settings"       && <SmtpSettingsView />}
+          {activeScreen === "admin-email-templates"   && <EmailTemplatesView />}
+          {activeScreen === "admin-bulk-mailer"       && <BulkMailerView />}
+          {activeScreen === "admin-email-logs"        && <EmailLogsView />}
+          {activeScreen === "admin-email-verification" && <EmailVerificationSettingsView />}
+          {activeScreen === "admin-conversion-review" && <ConversionReviewView />}
+          {activeScreen === "admin-offer-postbacks" && <OfferPostbacksView />}
+          {activeScreen === "admin-advertiser-postback-generator" && <AdvertiserPostbackGeneratorView />}
+          {activeScreen === "admin-advertiser-postback-logs" && <AdvertiserPostbackLogsView />}
+          {activeScreen === "admin-affiliate-postback-logs" && <AffiliatePostbackLogsView />}
+          {activeScreen === "admin-offer-categories" && <OfferCategoriesView />}
         </AdminLayout>
       </div>
     );
@@ -541,11 +413,8 @@ useEffect(() => {
         <AdvertiserLayout
           activeSection={activeScreen}
           setActiveSection={setActiveScreen}
-          advertiserName="ApexTrack Advertiser"
-          onLogout={() => {
-            setIsLoggedIn(false);
-            setAuthScreen("login");
-          }}
+          advertiserName={publisherName || "Advertiser"}
+          onLogout={handleLogout}
         >
           {activeScreen === "advertiser-dashboard" && <AdvertiserDashboardView />}
           {activeScreen === "advertiser-campaigns" && <AdvertiserCampaignManagementView />}
@@ -563,17 +432,14 @@ useEffect(() => {
         <ManagerLayout
           activeSection={activeScreen}
           setActiveSection={setActiveScreen}
-          managerName="Affiliate Manager"
-          onLogout={() => {
-            setIsLoggedIn(false);
-            setAuthScreen("login");
-          }}
+          managerName={publisherName || "Manager"}
+          onLogout={handleLogout}
         >
-          {activeScreen === "manager-dashboard" && <ManagerDashboardView />}
-          {activeScreen === "manager-publishers" && <ManagerPublisherReviewView />}
-          {activeScreen === "manager-offers-approval" && <ManagerOfferApprovalView />}
-          {activeScreen === "manager-communication" && <ManagerCommunicationView />}
-          {activeScreen === "manager-performance" && <ManagerPerformanceView />}
+          {activeScreen === "manager-dashboard" && <ManagerDashboardView managerId={userId} />}
+          {activeScreen === "manager-publishers" && <ManagerPublisherReviewView managerId={userId} />}
+          {activeScreen === "manager-offers-approval" && <ManagerOfferApprovalView managerId={userId} />}
+          {activeScreen === "manager-communication" && <ManagerCommunicationView managerId={userId} />}
+          {activeScreen === "manager-notes" && <ManagerNotesView managerId={userId} />}
         </ManagerLayout>
       </div>
     );
@@ -596,14 +462,9 @@ useEffect(() => {
                 setActiveScreen(screen);
                  // Always clear detail view states when navigating via sidebar
                  setSelectedOfferId(null);
-                 setSelectedInvoice(null);
               }}
               publisherName={publisherName}
-              unreadNotificationsCount={notifications.filter(n => !n.isRead).length}
-              onLogout={() => {
-                setIsLoggedIn(false);
-                setAuthScreen("login");
-              }}
+              onLogout={handleLogout}
             />
           </div>
 
@@ -645,9 +506,11 @@ useEffect(() => {
                   {isDark ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />}
                 </button>
 
+                <NotificationBell onViewAll={() => setActiveScreen("notifications")} />
+
                 <div className="hidden md:flex flex-col text-right leading-tight max-w-[150px]">
                   <span className="text-xs font-bold theme-text-main truncate">{publisherName}</span>
-                  <span className="text-[9px] font-mono theme-text-muted">Tier-1 VIP Affiliate Account</span>
+                  <span className="text-[9px] font-mono theme-text-muted">Publisher Account</span>
                 </div>
 
                 <div className="w-8.5 h-8.5 rounded-full bg-cyan-100 dark:bg-cyan-900/40 border border-cyan-200 dark:border-cyan-800/60 text-xs font-bold text-cyan-600 dark:text-cyan-300 flex items-center justify-center select-none uppercase shrink-0">
@@ -655,10 +518,7 @@ useEffect(() => {
                 </div>
 
                 <button
-                  onClick={() => {
-                    setIsLoggedIn(false);
-                    setAuthScreen("login");
-                  }}
+                  onClick={handleLogout}
                   className="hidden md:inline-flex theme-bg-well border theme-border hover:bg-rose-50 dark:hover:bg-rose-950/20 theme-text-secondary hover:text-rose-600 dark:hover:text-rose-455 px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase tracking-wider transition font-medium select-none cursor-pointer duration-100"
                 >
                   Logout
@@ -696,8 +556,6 @@ useEffect(() => {
                     { id: "reports", label: "Reports Ledger" },
                     { id: "link-generator", label: "Tracking Links" },
                     { id: "postbacks", label: "Postback Setup" },
-                    { id: "notifications", label: "Notifications" },
-                    { id: "announcements", label: "Announcements" },
                     { id: "api-access", label: "API Access Tokens" },
                     { id: "wallet", label: "My Wallet Balance" },
                     { id: "invoices", label: "Invoices & Billing" },
@@ -709,7 +567,6 @@ useEffect(() => {
                         setActiveScreen(it.id);
                           // Always clear detail view states when navigating via mobile menu
                           setSelectedOfferId(null);
-                          setSelectedInvoice(null);
                         setMobileMenuOpen(false);
                       }}
                       className={`w-full text-left py-2.5 px-4 rounded-xl text-xs font-semibold ${
@@ -722,11 +579,10 @@ useEffect(() => {
                 </div>
 
                 <div className="pt-4 border-t border-slate-200 flex items-center justify-between">
-                  <span className="text-[10px] text-slate-500 font-mono">Affiliate ID: #2081</span>
+                  <span className="text-[10px] text-slate-500 font-mono">Publisher Portal</span>
                   <button
                     onClick={() => {
-                      setIsLoggedIn(false);
-                      setAuthScreen("login");
+                      handleLogout();
                       setMobileMenuOpen(false);
                     }}
                     className="text-xs text-rose-400 font-bold"
@@ -751,47 +607,68 @@ useEffect(() => {
         /* -------------------------------------------------------------
             AUTHENTICATION SHELL VIEWS (Registration, Login, Recovery)
             ------------------------------------------------------------- */
-        <div className="min-h-screen theme-bg-page flex flex-col items-center justify-center p-4 relative overflow-hidden">
-          
-          {/* Ambient graphics bubbles background */}
-          <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none"></div>
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
-
-          <div className="w-full max-w-md pb-24 z-10">
-            <PublisherAuth
-              currentView={authScreen}
-              setView={(view) => {
-                if (view === "app") {
-                  const role = localStorage.getItem("admin_token") ? "admin" : "publisher";
-                  setUserRole(role);
-                  setIsLoggedIn(true);
-                  setActiveScreen(role === "admin" ? "admin-dashboard" : "dashboard");
-                } else {
-                  setAuthScreen(view);
-                }
-              }}
-              onLoginSuccess={(name) => {
-                if (name) setPublisherName(name);
-                const role = localStorage.getItem("admin_token") ? "admin" : "publisher";
-                setUserRole(role);
-                setIsLoggedIn(true);
-                setActiveScreen(role === "admin" ? "admin-dashboard" : "dashboard");
-              }}
-            />
-          </div>
-
-        </div>
+        authScreen === "advertiser-signup" ? (
+          <AdvertiserSignupView onBackToLogin={() => setAuthScreen("login")} />
+        ) : (
+          <>
+              <PublisherAuth
+                currentView={authScreen}
+                onAdvertiserSignup={() => setAuthScreen("advertiser-signup")}
+                setView={(view) => {
+                  if (view === "app") {
+                    (async () => {
+                      try {
+                        const user = await authApi.getCurrentUser();
+                        setUserRole(user.role);
+                        setIsLoggedIn(true);
+                        if (user.role === "admin" && user.adminRole === "AFFILIATE_MANAGER") {
+                          setUserId(user.id ?? "");
+                          setActiveScreen("manager-dashboard");
+                        } else if (user.role === "admin") {
+                          setActiveScreen("admin-dashboard");
+                        } else {
+                          setActiveScreen("dashboard");
+                        }
+                      } catch {
+                        const role = localStorage.getItem("admin_token") ? "admin" : "publisher";
+                        setUserRole(role);
+                        setIsLoggedIn(true);
+                        setActiveScreen(role === "admin" ? "admin-dashboard" : "dashboard");
+                      }
+                    })();
+                  } else {
+                    setAuthScreen(view);
+                  }
+                }}
+                onLoginSuccess={async (name) => {
+                  if (name) setPublisherName(name);
+                  try {
+                    const user = await authApi.getCurrentUser();
+                    setUserRole(user.role);
+                    setIsLoggedIn(true);
+                    if (user.role === "admin" && user.adminRole === "AFFILIATE_MANAGER") {
+                      setUserId(user.id ?? "");
+                      setActiveScreen("manager-dashboard");
+                    } else if (user.role === "admin") {
+                      setActiveScreen("admin-dashboard");
+                    } else {
+                      setActiveScreen("dashboard");
+                    }
+                  } catch {
+                    const role = localStorage.getItem("admin_token") ? "admin" : "publisher";
+                    setUserRole(role);
+                    setIsLoggedIn(true);
+                    setActiveScreen(role === "admin" ? "admin-dashboard" : "dashboard");
+                  }
+                }}
+              />
+          </>
+        )
       )}
 
       {/* -------------------------------------------------------------
           OVERLAY MODAL DETAIL SHEET: INDIVIDUAL DIGITAL INVOICE
           ------------------------------------------------------------- */}
-      {selectedInvoice && (
-        <InvoiceDetailModal
-          invoice={selectedInvoice}
-          onClose={() => setSelectedInvoice(null)}
-        />
-      )}
 
     </div>
   );

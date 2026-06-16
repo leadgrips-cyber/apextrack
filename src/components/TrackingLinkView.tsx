@@ -113,17 +113,25 @@ export function TrackingLinkView({ offers }: TrackingLinkViewProps) {
                   No approved offers available. Apply for an offer in the Marketplace first.
                 </p>
               ) : (
-                <select
-                  value={selectedOfferId}
-                  onChange={(e) => setSelectedOfferId(e.target.value)}
-                  className="mt-1 block w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 font-medium"
-                >
-                  {approvedOffers.map((o) => (
-                    <option key={o.id} value={String(o.id)}>
-                      [{o.id}] {o.name} (${o.payoutValue.toFixed(2)} {o.payoutType})
-                    </option>
-                  ))}
-                </select>
+                <>
+                  <select
+                    value={selectedOfferId}
+                    onChange={(e) => setSelectedOfferId(e.target.value)}
+                    className="mt-1 block w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 font-medium"
+                  >
+                    {approvedOffers.map((o) => (
+                      <option key={o.id} value={String(o.id)}>
+                        [{o.id}] {o.name} (${o.payoutValue.toFixed(2)} {o.payoutType})
+                      </option>
+                    ))}
+                  </select>
+                  {activeOfferObj?.logo_url && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <img src={activeOfferObj.logo_url} alt="" className="w-8 h-8 object-contain rounded-lg border border-slate-700" />
+                      <span className="text-[10px] text-slate-400 font-mono">{activeOfferObj.name}</span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 

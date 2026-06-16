@@ -1,4 +1,5 @@
-import { LayoutGrid, Users, Tag, MessageSquare, BarChart3, LogOut } from "lucide-react";
+import { LayoutGrid, Users, Tag, MessageSquare, StickyNote, LogOut } from "lucide-react";
+import { useBranding } from "../../contexts/BrandingContext";
 
 interface ManagerSidebarProps {
   activeSection: string;
@@ -9,12 +10,14 @@ interface ManagerSidebarProps {
 const navItems = [
   { id: "manager-dashboard", label: "Dashboard", icon: LayoutGrid },
   { id: "manager-publishers", label: "Publisher Review", icon: Users },
-  { id: "manager-offers-approval", label: "Offer Approval", icon: Tag },
+  { id: "manager-offers-approval", label: "Offer Requests", icon: Tag },
   { id: "manager-communication", label: "Communication", icon: MessageSquare },
-  { id: "manager-performance", label: "Performance", icon: BarChart3 },
+  { id: "manager-notes", label: "Notes", icon: StickyNote },
 ];
 
 export function ManagerSidebar({ activeSection, setActiveSection, onLogout }: ManagerSidebarProps) {
+  const branding = useBranding();
+
   return (
     <aside className="w-72 bg-white dark:bg-slate-950 border-r theme-border flex flex-col h-screen shrink-0 font-sans shadow-sm">
       <div className="p-6 border-b theme-border">
@@ -23,7 +26,7 @@ export function ManagerSidebar({ activeSection, setActiveSection, onLogout }: Ma
             <LayoutGrid className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-sm font-black uppercase tracking-[0.25em] theme-text-main">ApexTrack</div>
+            <div className="text-sm font-black uppercase tracking-[0.25em] theme-text-main">{branding.networkName}</div>
             <div className="text-[10px] theme-text-muted uppercase tracking-widest font-mono pt-0.5">Affiliate Manager</div>
           </div>
         </div>

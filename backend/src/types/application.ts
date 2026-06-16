@@ -13,6 +13,11 @@ export interface OfferApplicationRecord {
   submission_data?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
+  // Enriched via JOIN in admin list query
+  offer_name?: string | null;
+  offer_logo_url?: string | null;
+  publisher_full_name?: string | null;
+  publisher_company_name?: string | null;
 }
 
 export interface ApplicationCreatePayload {
@@ -29,4 +34,5 @@ export interface ApplicationFilterParams {
   status?: ApplicationStatus;
   offer_id?: number;
   publisher_id?: string;
+  search?: string;
 }

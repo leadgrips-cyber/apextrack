@@ -56,7 +56,14 @@ export function requestSizeLimitMiddleware(
   res: Response,
   next: NextFunction
 ): void {
-  const maxSize = 1024 * 100; // 100KB
+  // Skip size check for multipart uploads — multer enforces per-file limits
+  const contentType = req.get('content-type') ?? '';
+  if (contentType.includes('multipart/form-data')) {
+    next();
+    return;
+  }
+
+  const maxSize = 1024 * 100; // 100KB for JSON/form bodies
   const contentLength = parseInt(req.get('content-length') || '0', 10);
 
   if (contentLength > maxSize) {

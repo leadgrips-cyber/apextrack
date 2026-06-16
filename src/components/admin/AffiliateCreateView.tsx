@@ -115,7 +115,7 @@ export function AffiliateCreateView({ onSuccess }: AffiliateCreateViewProps) {
     passwordValid &&
     confirmPasswordValid &&
     fields.country !== "" &&
-    fields.status !== "" &&
+    (fields.status as string) !== "" &&
     fields.domain !== "" &&
     fields.trafficSource !== "" &&
     postbackValid;
@@ -444,7 +444,7 @@ export function AffiliateCreateView({ onSuccess }: AffiliateCreateViewProps) {
                   value={fields.status}
                   onChange={handleChange("status")}
                   onBlur={handleBlur("status")}
-                  className={inputClass(touched.status && fields.status === "")}
+                  className={inputClass(touched.status && (fields.status as string) === "")}
                 >
                   {statusOptions.map((status) => (
                     <option key={status} value={status}>
@@ -452,7 +452,7 @@ export function AffiliateCreateView({ onSuccess }: AffiliateCreateViewProps) {
                     </option>
                   ))}
                 </select>
-                {touched.status && fields.status === "" && (
+                {touched.status && (fields.status as string) === "" && (
                   <p className="text-rose-600 text-xs">Status is required.</p>
                 )}
               </label>

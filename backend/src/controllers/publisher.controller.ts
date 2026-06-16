@@ -12,8 +12,11 @@ import {
   listPublisherTrackingLinks,
   listPublishers,
   reactivatePublisher,
+  rejectPublisher,
   suspendPublisher,
+  updatePublisherProfile,
 } from "../services/publisher.service.js";
+import { bulkAssignPublishers } from "../repositories/publisher.repository.js";
 
 function parsePositiveNumber(value: unknown, fallback: number) {
   const numeric = Number(value);
@@ -55,6 +58,17 @@ export async function handleApprovePublisher(req: AuthRequest, res: Response, ne
   try {
     const publisherId = req.params.id;
     const publisher = await approvePublisher(publisherId);
+    res.json({ publisher });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function handleRejectPublisher(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const publisherId = req.params.id;
+    const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : undefined;
+    const publisher = await rejectPublisher(publisherId, reason);
     res.json({ publisher });
   } catch (error) {
     next(error);
@@ -203,6 +217,67 @@ export async function handleAssignManager(req: AuthRequest, res: Response, next:
     }
     const publisher = await assignManager(publisherId, manager_id.trim());
     res.json({ publisher });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function handleUpdatePublisherProfile(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const publisherId = req.params.id;
+    const body = req.body as Record<string, unknown>;
+    const str = (v: unknown): string | undefined =>
+      typeof v === 'string' ? v : undefined;
+
+    const publisher = await updatePublisherProfile(publisherId, {
+      full_name:            str(body.full_name),
+      email:                str(body.email),
+      login_name:           str(body.login_name),
+      company_name:         str(body.company_name),
+      country_code:         str(body.country_code),
+      account_status:       str(body.account_status),
+      new_password:         str(body.new_password),
+      phone:                str(body.phone),
+      website:              str(body.website),
+      address:              str(body.address),
+      city:                 str(body.city),
+      state_name:           str(body.state_name),
+      postal_code:          str(body.postal_code),
+      payment_method:       str(body.payment_method),
+      payment_details:      str(body.payment_details),
+      payment_term:         str(body.payment_term),
+      internal_notes:       str(body.internal_notes),
+      traffic_quality_notes: str(body.traffic_quality_notes),
+      risk_score:           str(body.risk_score),
+      telegram:             str(body.telegram),
+      skype:                str(body.skype),
+      whatsapp:             str(body.whatsapp),
+      manager_notes:             str(body.manager_notes),
+      manager_recommendation:    str(body.manager_recommendation),
+      manager_notes_updated_at:  str(body.manager_notes_updated_at),
+    });
+    res.json({ publisher });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function handleBulkAssign(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { publisher_ids, manager_id } = req.body as { publisher_ids: unknown; manager_id: unknown };
+
+    if (!Array.isArray(publisher_ids) || publisher_ids.length === 0) {
+      res.status(400).json({ message: 'publisher_ids must be a non-empty array' });
+      return;
+    }
+    if (!publisher_ids.every((id) => typeof id === 'string')) {
+      res.status(400).json({ message: 'all publisher_ids must be strings' });
+      return;
+    }
+
+    const resolvedManagerId = typeof manager_id === 'string' && manager_id.trim() ? manager_id.trim() : null;
+    const count = await bulkAssignPublishers(publisher_ids as string[], resolvedManagerId);
+    res.json({ updated: count });
   } catch (error) {
     next(error);
   }

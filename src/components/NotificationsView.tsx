@@ -1,250 +1,220 @@
-import React, { useState } from "react";
-import { 
-  Bell, 
-  Check, 
-  CheckCircle2, 
-  AlertTriangle, 
-  PauseCircle, 
-  CreditCard, 
-  Megaphone, 
-  Trash2, 
+import { useState, useEffect, useCallback } from "react";
+import {
+  Bell,
+  Check,
+  CheckCircle2,
+  AlertTriangle,
+  PauseCircle,
+  CreditCard,
+  Megaphone,
   Inbox,
-  Filter
 } from "lucide-react";
+import {
+  listNotifications,
+  markAsRead,
+  markAllAsRead,
+  NotificationRecord,
+} from "../services/notifications";
 
-export interface PublisherNotification {
-  id: string;
-  type: "approved" | "rejected" | "requested" | "payout" | "paused" | "activated" | "announcement";
-  title: string;
-  message: string;
-  timestamp: string;
-  isRead: boolean;
-  offerId?: string;
-  rejectionReason?: string;
+// Type badge icon based on notification_type
+function getIcon(type: string) {
+  switch (type) {
+    case "approved":
+      return <CheckCircle2 className="w-5 h-5 text-emerald-400" />;
+    case "rejected":
+      return <AlertTriangle className="w-5 h-5 text-rose-400" />;
+    case "payout":
+      return <CreditCard className="w-5 h-5 text-cyan-400" />;
+    case "paused":
+      return <PauseCircle className="w-5 h-5 text-slate-400" />;
+    case "announcement":
+      return <Megaphone className="w-5 h-5 text-indigo-400" />;
+    default:
+      return <Bell className="w-5 h-5 text-amber-400" />;
+  }
 }
 
-interface NotificationsViewProps {
-  notifications: PublisherNotification[];
-  onMarkAsRead: (id: string) => void;
-  onMarkAllAsRead: () => void;
-  onDeleteNotification: (id: string) => void;
-  onClearAll: () => void;
-}
-
-export function NotificationsView({
-  notifications,
-  onMarkAsRead,
-  onMarkAllAsRead,
-  onDeleteNotification,
-  onClearAll
-}: NotificationsViewProps) {
-  const [filterType, setFilterType] = useState<string>("all");
-
-  const filteredNotifications = notifications.filter(notif => {
-    if (filterType === "all") return true;
-    return notif.type === filterType;
+function fmtDate(s: string) {
+  return new Date(s).toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
+}
 
-  const getIcon = (type: string) => {
-    switch (type) {
-      case "approved":
-        return <CheckCircle2 className="w-5 h-5 text-emerald-400" />;
-      case "rejected":
-        return <AlertTriangle className="w-5 h-5 text-rose-400" />;
-      case "requested":
-        return <Bell className="w-5 h-5 text-amber-400" />;
-      case "payout":
-        return <CreditCard className="w-5 h-5 text-cyan-400" />;
-      case "paused":
-        return <PauseCircle className="w-5 h-5 text-slate-400" />;
-      case "activated":
-        return <Check className="w-5 h-5 text-sky-400" />;
-      case "announcement":
-      default:
-        return <Megaphone className="w-5 h-5 text-indigo-400" />;
-    }
-  };
+const PAGE_SIZE = 30;
 
-  const getBadgeColor = (type: string) => {
-    switch (type) {
-      case "approved":
-        return "bg-emerald-100 text-emerald-800 border-emerald-300";
-      case "rejected":
-        return "bg-rose-100 text-rose-800 border-rose-300";
-      case "requested":
-        return "bg-amber-100 text-amber-800 border-amber-300";
-      case "payout":
-        return "bg-cyan-50 text-cyan-700 border-cyan-200";
-      case "paused":
-        return "bg-slate-100 text-slate-800 border-slate-300";
-      case "activated":
-        return "bg-sky-100 text-sky-800 border-sky-200";
-      case "announcement":
-      default:
-        return "bg-indigo-100 text-indigo-800 border-indigo-300";
+export function NotificationsView() {
+  const [rows, setRows] = useState<NotificationRecord[]>([]);
+  const [total, setTotal] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await listNotifications(page, PAGE_SIZE);
+      setRows(result.rows);
+      setTotal(result.total);
+      setUnreadCount(result.unread_count);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [page]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function handleMarkOne(id: string) {
+    try {
+      await markAsRead(id);
+      setRows((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch {}
+  }
+
+  async function handleMarkAll() {
+    try {
+      await markAllAsRead();
+      setRows((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+    } catch {}
+  }
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div className="space-y-6 font-sans animate-fadeIn" id="notifications-viewport-workspace">
-      
-      {/* Page Header */}
-      <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
-        <div className="space-y-1">
-          <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border theme-border bg-slate-50 dark:bg-slate-900 px-6 py-5">
+        <div>
+          <h2 className="text-lg font-bold theme-text-main flex items-center gap-2">
             <Bell className="w-5 h-5 text-cyan-400" />
-            Notifications Hub ({notifications.filter(v => !v.isRead).length} unread)
+            Notifications
+            {unreadCount > 0 && (
+              <span className="bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                {unreadCount} unread
+              </span>
+            )}
           </h2>
-          <p className="text-xs text-slate-400">
-            Real-time feed of campaign approvals, rejected traffic review warnings, published releases, and announcements.
+          <p className="text-xs theme-text-muted mt-1">
+            System notifications — conversion updates, payouts, and account activity.
           </p>
         </div>
-
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
+        {unreadCount > 0 && (
           <button
-            onClick={onMarkAllAsRead}
-            disabled={notifications.every(n => n.isRead)}
-            className="bg-slate-950 border border-slate-850 hover:border-slate-700 text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:text-white px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold transition select-none flex items-center gap-1.5"
+            onClick={handleMarkAll}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border theme-border text-xs font-semibold theme-text-secondary hover:bg-slate-100 dark:hover:bg-slate-800 transition"
           >
             <Check className="w-4 h-4 text-emerald-400" />
             Mark All Read
           </button>
-          
-          <button
-            onClick={onClearAll}
-            disabled={notifications.length === 0}
-            className="bg-rose-950/20 border border-rose-900/50 hover:border-rose-800 text-rose-400 disabled:opacity-50 disabled:cursor-not-allowed px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold transition select-none flex items-center gap-1.5"
-          >
-            <Trash2 className="w-4 h-4" />
-            Clear All
-          </button>
-        </div>
+        )}
       </div>
 
-      {/* FILTER CONTROL BAR */}
-      <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs">
-        <div className="flex items-center gap-2 font-mono text-[11px] text-slate-450">
-          <Filter className="w-4 h-4 text-cyan-500" />
-          <span>Category Filter:</span>
+      {error && (
+        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 text-rose-400 px-4 py-3 text-sm">
+          {error}
         </div>
+      )}
 
-        <div className="flex flex-wrap gap-1.5">
-          {[
-            { value: "all", label: "All Items" },
-            { value: "approved", label: "Approved Offers" },
-            { value: "rejected", label: "Rejections" },
-            { value: "requested", label: "Access Requests" },
-            { value: "payout", label: "Payouts Released" },
-            { value: "paused", label: "Paused Notifications" },
-            { value: "activated", label: "Activated Offers" },
-            { value: "announcement", label: "Network Bulletins" }
-          ].map((cat) => (
-            <button
-              key={cat.value}
-              onClick={() => setFilterType(cat.value)}
-              className={`px-3 py-1.5 rounded-lg font-semibold uppercase tracking-wider text-[10px] transition font-sans ${
-                filterType === cat.value
-                  ? "bg-slate-950 text-cyan-400 border border-cyan-900/50 font-bold"
-                  : "text-slate-400 hover:bg-slate-950/40 hover:text-slate-200"
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* NOTIFICATIONS LIST CONTAINER */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-        {filteredNotifications.length === 0 ? (
-          <div className="text-center py-16 text-slate-500 space-y-3 bg-slate-950/40">
-            <Inbox className="w-10 h-10 text-slate-700 mx-auto" />
-            <p className="text-sm font-semibold font-mono uppercase tracking-wide">No current alerts logged.</p>
-            <p className="text-xs max-w-sm mx-auto text-slate-450 leading-relaxed">
-              When campaign relationships are updated or payouts are processed, secure notifications will be broadcast here automatically.
+      {/* Notifications list */}
+      <div className="rounded-2xl border theme-border overflow-hidden">
+        {loading ? (
+          <div className="px-4 py-12 text-center text-sm theme-text-muted">Loading…</div>
+        ) : rows.length === 0 ? (
+          <div className="px-4 py-16 text-center space-y-3">
+            <Inbox className="w-10 h-10 mx-auto theme-text-muted opacity-30" />
+            <p className="text-sm font-semibold theme-text-muted">No notifications yet.</p>
+            <p className="text-xs theme-text-muted max-w-sm mx-auto">
+              System events like conversion approvals, payouts, and account changes will appear here.
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-850">
-            {filteredNotifications.map((notif) => (
+          <div className="divide-y theme-divide">
+            {rows.map((n) => (
               <div
-                key={notif.id}
-                className={`p-5 transition flex flex-col md:flex-row items-start md:items-center justify-between gap-4 font-sans border-l-4 ${
-                  !notif.isRead 
-                    ? "bg-cyan-500/[0.02] border-cyan-500" 
-                    : "border-transparent hover:bg-slate-850/15"
+                key={n.id}
+                className={`flex items-start gap-4 px-5 py-4 transition border-l-4 ${
+                  !n.is_read
+                    ? "border-cyan-500 bg-cyan-50/30 dark:bg-cyan-900/10"
+                    : "border-transparent hover:bg-slate-50 dark:hover:bg-slate-900/30"
                 }`}
               >
-                <div className="flex items-start gap-3.5 min-w-0">
-                  <div className="shrink-0 mt-0.5 p-2 bg-slate-950 rounded-xl border border-slate-850">
-                    {getIcon(notif.type)}
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded text-[8px] font-mono tracking-wider font-bold uppercase border ${getBadgeColor(notif.type)}`}>
-                        {notif.type}
+                {/* Icon */}
+                <div className="shrink-0 mt-0.5 p-2 rounded-xl border theme-border bg-slate-50 dark:bg-slate-900">
+                  {getIcon(n.notification_type)}
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    {!n.is_read && (
+                      <span className="text-[8px] font-bold bg-cyan-400 text-slate-950 px-1.5 py-0.5 rounded uppercase tracking-widest font-mono">
+                        NEW
                       </span>
-                      {!notif.isRead && (
-                        <span className="text-[8px] font-bold bg-cyan-400 text-slate-950 px-1 rounded uppercase tracking-widest font-mono">
-                          NEW
-                        </span>
-                      )}
-                      {notif.offerId && (
-                        <span className="text-[9px] font-mono font-medium text-slate-500">
-                          Offer ID: #{notif.offerId}
-                        </span>
-                      )}
-                    </div>
-
-                    <strong className="text-sm text-slate-200 block font-bold leading-tight">
-                      {notif.title}
-                    </strong>
-                    
-                    <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
-                      {notif.message}
-                    </p>
-
-                    {notif.rejectionReason && (
-                      <div className="p-2.5 mt-2 bg-rose-50 border border-rose-200 text-[11px] text-rose-800 font-mono rounded-lg">
-                        <strong>REJECTION NOTES:</strong> {notif.rejectionReason}
-                      </div>
                     )}
+                    <span className="text-xs font-mono theme-text-muted uppercase tracking-wider">
+                      {n.notification_type}
+                    </span>
                   </div>
+                  <p className={`text-sm theme-text-main leading-snug ${!n.is_read ? "font-semibold" : ""}`}>
+                    {n.title}
+                  </p>
+                  <p className="text-xs theme-text-muted mt-1 leading-relaxed">{n.message}</p>
+                  <p className="text-[10px] theme-text-muted mt-2 font-mono">{fmtDate(n.created_at)}</p>
                 </div>
 
-                <div className="flex flex-row md:flex-col items-end gap-3 md:gap-2 shrink-0 w-full md:w-auto pt-2 md:pt-0 border-t border-slate-850 md:border-transparent">
-                  <span className="text-[10px] text-slate-500 font-mono text-left md:text-right block">
-                    {notif.timestamp}
-                  </span>
-                  
-                  <div className="flex gap-2 ml-auto">
-                    {!notif.isRead && (
-                      <button
-                        onClick={() => onMarkAsRead(notif.id)}
-                        className="bg-slate-950 border border-slate-800 hover:border-slate-700 text-cyan-400 hover:text-cyan-300 px-2.5 py-1 rounded text-[10px] font-bold font-mono transition uppercase cursor-pointer"
-                        title="Mark as read"
-                      >
-                        Read OK
-                      </button>
-                    )}
-                    
-                    <button
-                      onClick={() => onDeleteNotification(notif.id)}
-                      className="bg-slate-950 border border-slate-850 hover:bg-rose-950/35 text-slate-500 hover:text-rose-400 p-1 rounded-lg transition"
-                      title="Delete record"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-
+                {/* Mark-as-read button */}
+                {!n.is_read && (
+                  <button
+                    onClick={() => handleMarkOne(n.id)}
+                    className="shrink-0 mt-1 px-2.5 py-1 rounded-lg border theme-border text-[10px] font-bold font-mono uppercase tracking-wider text-cyan-500 hover:bg-cyan-50 dark:hover:bg-cyan-900/30 transition"
+                    title="Mark as read"
+                  >
+                    Read
+                  </button>
+                )}
               </div>
             ))}
           </div>
         )}
       </div>
 
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm theme-text-muted">
+          <span>
+            Page {page} of {totalPages} &middot; {total} total
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-3 py-1.5 rounded-xl border theme-border hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition"
+            >
+              Prev
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-3 py-1.5 rounded-xl border theme-border hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

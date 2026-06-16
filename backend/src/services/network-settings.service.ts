@@ -9,6 +9,11 @@ const DEFAULTS = {
   logo_url: null as null,
   favicon_url: null as null,
   login_bg_url: null as null,
+  email_verification_required: false,
+  turnstile_enabled: false,
+  turnstile_site_key: '',
+  turnstile_secret_key: '',
+  auto_approve_publishers: false,
 };
 
 export async function getSettings() {
@@ -20,11 +25,15 @@ export async function getSettings() {
 export async function getPublicSettings(): Promise<PublicNetworkSettings> {
   const settings = await networkSettingsRepository.getNetworkSettings();
   return {
-    networkName: settings?.network_name ?? DEFAULTS.network_name,
-    trackingDomain: settings?.tracking_domain ?? DEFAULTS.tracking_domain,
-    logoUrl: settings?.logo_url ?? null,
-    faviconUrl: settings?.favicon_url ?? null,
-    loginBgUrl: settings?.login_bg_url ?? null,
+    networkName:     settings?.network_name     ?? DEFAULTS.network_name,
+    trackingDomain:  settings?.tracking_domain  ?? DEFAULTS.tracking_domain,
+    logoUrl:         settings?.logo_url         ?? null,
+    faviconUrl:      settings?.favicon_url      ?? null,
+    loginBgUrl:      settings?.login_bg_url     ?? null,
+    loginDomain:     settings?.login_domain     ?? null,
+    supportEmail:    settings?.support_email    ?? null,
+    turnstileEnabled: settings?.turnstile_enabled  ?? false,
+    turnstileSiteKey: settings?.turnstile_site_key ?? '',
   };
 }
 

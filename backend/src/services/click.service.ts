@@ -1,6 +1,8 @@
 import { randomUUID } from 'crypto';
 import { ClickRequestQuery, OfferRecord, PublisherStatus } from "../types/click.js";
 import * as clickRepository from "../repositories/click.repository.js";
+import { evaluateTargeting } from "./targeting.service.js";
+import { checkClickCaps } from "./caps.service.js";
 
 function parseDeviceType(userAgent?: string): string | null {
   if (!userAgent) return null;
@@ -79,6 +81,25 @@ export async function createClickEvent(
     }
   }
 
+  const countryCode = parseCountry(headers);
+  const deviceType  = parseDeviceType(userAgent);
+
+  // ── Targeting enforcement ──────────────────────────────────────────────────
+  const targetingResult = await evaluateTargeting(offer.id, {
+    countryCode,
+    deviceType,
+    userAgent,
+  });
+  if (targetingResult.blocked) {
+    throw Object.assign(new Error(targetingResult.reason), { code: "TARGETING_BLOCKED" });
+  }
+
+  // ── Click cap enforcement ──────────────────────────────────────────────────
+  const capResult = await checkClickCaps(offer.id);
+  if (capResult.blocked) {
+    throw Object.assign(new Error(capResult.reason), { code: "CLICK_CAP_REACHED" });
+  }
+
   const clickId = randomUUID();
   const clickData = {
     click_id: clickId,
@@ -90,8 +111,8 @@ export async function createClickEvent(
     sub4: query.sub4 || null,
     sub5: query.sub5 || null,
     click_ip: ipAddress,
-    country_code: parseCountry(headers),
-    device_type: parseDeviceType(userAgent),
+    country_code: countryCode,
+    device_type: deviceType,
     user_agent: userAgent || null,
     referrer: referrer || null,
     redirect_url: offer.landing_page_url,

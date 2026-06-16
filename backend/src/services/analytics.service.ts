@@ -130,6 +130,66 @@ export async function getRevenueByOfferData(params: {
   return { offers: rows, total, page, pageSize };
 }
 
+export async function getClickReportData(params: {
+  startDate?: string;
+  endDate?: string;
+  offerId?: number;
+  publisherEmail?: string;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<{ rows: analyticsRepository.ClickReportRow[]; total: number; page: number; pageSize: number }> {
+  const page = Math.max(1, Number(params.page) || 1);
+  const pageSize = Math.min(Math.max(1, Number(params.pageSize) || 25), 10000);
+  const { rows, total } = await analyticsRepository.getClickReport({
+    startDate: params.startDate,
+    endDate: params.endDate,
+    offerId: params.offerId,
+    publisherEmail: params.publisherEmail,
+    search: params.search,
+    page,
+    pageSize,
+  });
+  return { rows, total, page, pageSize };
+}
+
+export async function getConversionReportData(params: {
+  startDate?: string;
+  endDate?: string;
+  offerId?: number;
+  publisherEmail?: string;
+  status?: string;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<{ rows: analyticsRepository.ConversionReportRow[]; total: number; page: number; pageSize: number }> {
+  const page = Math.max(1, Number(params.page) || 1);
+  const pageSize = Math.min(Math.max(1, Number(params.pageSize) || 25), 10000);
+  const { rows, total } = await analyticsRepository.getConversionReport({
+    startDate: params.startDate,
+    endDate: params.endDate,
+    offerId: params.offerId,
+    publisherEmail: params.publisherEmail,
+    status: params.status,
+    search: params.search,
+    page,
+    pageSize,
+  });
+  return { rows, total, page, pageSize };
+}
+
+export async function getDailyReportData(params: {
+  startDate: string;
+  endDate: string;
+  offerId?: number;
+  publisherEmail?: string;
+}): Promise<analyticsRepository.DailyReportRow[]> {
+  if (!params.startDate || !params.endDate) {
+    throw new Error('startDate and endDate are required');
+  }
+  return analyticsRepository.getDailyReport(params);
+}
+
 export async function getRevenueTransactionsData(params: {
   startDate?: string;
   endDate?: string;

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import {
   TrendingUp,
   Activity,
@@ -7,58 +7,61 @@ import {
   DollarSign,
   MousePointer,
   Sparkles,
-  Play,
   CheckCircle,
   MapPin,
   Clock,
   ExternalLink,
   ChevronRight,
-  TrendingDown,
-  Info
+  Globe,
+  Megaphone,
 } from "lucide-react";
-import { REPLAY_TRAFFIC_LOGS } from "../data/publisherDemo";
+import * as publisherApi from "../services/publisherAnalytics";
+import type { PublisherDashboardStats } from "../services/publisherAnalytics";
+import { listActiveAnnouncements, AnnouncementRecord } from "../services/announcements";
+
+function getDateRange(tf: "today" | "yesterday" | "7days" | "month") {
+  const today = new Date().toISOString().slice(0, 10);
+  if (tf === "today") return { startDate: today, endDate: today };
+  if (tf === "yesterday") {
+    const d = new Date(); d.setDate(d.getDate() - 1);
+    const s = d.toISOString().slice(0, 10);
+    return { startDate: s, endDate: s };
+  }
+  if (tf === "7days") {
+    const d = new Date(); d.setDate(d.getDate() - 7);
+    return { startDate: d.toISOString().slice(0, 10), endDate: today };
+  }
+  const d = new Date(); d.setDate(d.getDate() - 30);
+  return { startDate: d.toISOString().slice(0, 10), endDate: today };
+}
+
+const defaultStats: PublisherDashboardStats = {
+  total_clicks: 0, total_conversions: 0, total_payout: '0.00', total_revenue: '0.00',
+  epc: '0.0000', cr: '0.00', available_balance: '0.000000', pending_balance: '0.000000', withdrawn_balance: '0.000000',
+};
 
 export function PublisherDashboardView({ onNavigate }: { onNavigate: (screen: string) => void }) {
   const [timeframe, setTimeframe] = useState<"today" | "yesterday" | "7days" | "month">("7days");
-  const [trafficFeed, setTrafficFeed] = useState(REPLAY_TRAFFIC_LOGS);
+  const [trafficFeed, setTrafficFeed] = useState<any[]>([]);
+  const [stats, setStats] = useState<PublisherDashboardStats>(defaultStats);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [announcements, setAnnouncements] = useState<AnnouncementRecord[]>([]);
 
-  // Computed live numbers based on timeframe selection to mimic realistic reactivity
-  const timeBasedStats = useMemo(() => {
-    switch (timeframe) {
-      case "today":
-        return { clicks: 1240, cvs: 54, rev: 335.20, epc: 0.27, cr: 4.35, pending: 95.00 };
-      case "yesterday":
-        return { clicks: 3102, cvs: 122, rev: 890.40, epc: 0.28, cr: 3.93, pending: 180.00 };
-      case "month":
-        return { clicks: 92840, cvs: 3951, rev: 24905.50, epc: 0.26, cr: 4.25, pending: 1420.50 };
-      case "7days":
-      default:
-        return { clicks: 14201, cvs: 588, rev: 3840.80, epc: 0.27, cr: 4.14, pending: 450.00 };
-    }
+  useEffect(() => {
+    setStatsLoading(true);
+    const range = getDateRange(timeframe);
+    publisherApi.getPublisherDashboardStats(range)
+      .then(setStats)
+      .catch(() => setStats(defaultStats))
+      .finally(() => setStatsLoading(false));
   }, [timeframe]);
 
-  // Inject a new mock tracking click redirect representing real-time traffic updates
-  const handleSimulateClick = () => {
-    const randomOffers = ["NordVPNSecure", "Apex Trading App", "FastHomeLoan", "KetoDiet Shred", "CoinLedger crypto"];
-    const randomGeos = ["US", "DE", "GB", "CA", "SG", "JP", "FR"];
-    const randomSub = ["google_ads", "fb_campaign", "adsterra_pop", "aff_forum", "newsletter_june"];
-    const now = new Date();
-    const timeStr = now.toTimeString().split(" ")[0];
+  useEffect(() => {
+    listActiveAnnouncements()
+      .then(setAnnouncements)
+      .catch(() => {});
+  }, []);
 
-    const isConv = Math.random() > 0.8;
-    const item = {
-      time: timeStr,
-      offer: randomOffers[Math.floor(Math.random() * randomOffers.length)],
-      geo: randomGeos[Math.floor(Math.random() * randomGeos.length)],
-      type: isConv ? "lead" as const : "click" as const,
-      status: isConv ? "Converted" : "Redirected",
-      sub1: randomSub[Math.floor(Math.random() * randomSub.length)],
-      sub2: "sub_aff_" + Math.floor(Math.random() * 100),
-      ...(isConv && { payout: `$${(Math.random() * 25 + 3).toFixed(2)}` })
-    };
-
-    setTrafficFeed(prev => [item, ...prev.slice(0, 7)]);
-  };
 
   return (
     <div className="space-y-6 font-sans animate-fadeIn" id="dashboard-view">
@@ -78,10 +81,9 @@ export function PublisherDashboardView({ onNavigate }: { onNavigate: (screen: st
             </div>
           </div>
           <div className="inline-flex flex-wrap items-center gap-3 rounded-full border border-slate-200 bg-white/90 px-4 py-2 shadow-sm">
-            <span className="text-xs uppercase tracking-[0.3em] text-slate-500 font-semibold font-mono">Affiliate ID</span>
-            <span className="text-xs font-black text-slate-900">#2081</span>
+            <span className="text-xs uppercase tracking-[0.3em] text-slate-500 font-semibold font-mono">Publisher Portal</span>
             <span className="inline-flex items-center gap-1 rounded-full bg-cyan-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-cyan-700 border border-cyan-200">
-              Verified
+              Active
             </span>
           </div>
         </div>
@@ -103,6 +105,26 @@ export function PublisherDashboardView({ onNavigate }: { onNavigate: (screen: st
         </div>
       </div>
 
+      {/* Announcements */}
+      {announcements.length > 0 && (
+        <div className="space-y-3">
+          {announcements.map((a) => (
+            <div
+              key={a.id}
+              className="flex items-start gap-4 rounded-2xl border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-900/20 px-5 py-4"
+            >
+              <div className="shrink-0 mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-800/40">
+                <Megaphone className="w-4 h-4 text-indigo-600 dark:text-indigo-300" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-indigo-900 dark:text-indigo-200">{a.title}</p>
+                <p className="text-xs text-indigo-700 dark:text-indigo-300 mt-0.5 leading-relaxed">{a.message}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* KPI GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4">
         
@@ -110,87 +132,72 @@ export function PublisherDashboardView({ onNavigate }: { onNavigate: (screen: st
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] uppercase tracking-[0.32em] font-bold text-slate-500">Gross Clicks</p>
-              <p className="mt-4 text-3xl font-extrabold tracking-tight text-slate-950">{timeBasedStats.clicks.toLocaleString()}</p>
+              <p className="mt-4 text-3xl font-extrabold tracking-tight text-slate-950">{statsLoading ? '—' : stats.total_clicks.toLocaleString()}</p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/90 text-cyan-600 shadow-sm">
               <MousePointer className="w-5 h-5" />
             </div>
           </div>
-          <p className="mt-4 text-sm text-slate-600 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-emerald-500" />
-            +14.2% versus prev period
-          </p>
+          <p className="mt-4 text-xs text-slate-500 font-mono">Selected period total</p>
         </div>
 
         <div className="rounded-[20px] border border-slate-200 bg-gradient-to-br from-emerald-50 to-green-100 p-5 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] uppercase tracking-[0.32em] font-bold text-slate-500">Conversions</p>
-              <p className="mt-4 text-3xl font-extrabold tracking-tight text-slate-950">{timeBasedStats.cvs.toLocaleString()}</p>
+              <p className="mt-4 text-3xl font-extrabold tracking-tight text-slate-950">{statsLoading ? '—' : stats.total_conversions.toLocaleString()}</p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/90 text-emerald-600 shadow-sm">
               <UserCheck className="w-5 h-5" />
             </div>
           </div>
-          <p className="mt-4 text-sm text-slate-600 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-slate-900" />
-            +8.6% quality lift
-          </p>
+          <p className="mt-4 text-xs text-slate-500 font-mono">Selected period total</p>
         </div>
 
         <div className="rounded-[20px] border border-slate-200 bg-gradient-to-br from-violet-50 to-purple-100 p-5 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] uppercase tracking-[0.32em] font-bold text-slate-500">Revenue (USD)</p>
-              <p className="mt-4 text-3xl font-extrabold tracking-tight text-slate-950">${timeBasedStats.rev.toLocaleString("en-US", { minimumFractionDigits: 2 })}</p>
+              <p className="mt-4 text-3xl font-extrabold tracking-tight text-slate-950">{statsLoading ? '—' : `$${Number(stats.total_payout).toLocaleString("en-US", { minimumFractionDigits: 2 })}`}</p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/90 text-violet-600 shadow-sm">
               <DollarSign className="w-5 h-5" />
             </div>
           </div>
-          <p className="mt-4 text-sm text-slate-600 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-indigo-500" />
-            +21.9% revenue growth
-          </p>
+          <p className="mt-4 text-xs text-slate-500 font-mono">Payout earnings</p>
         </div>
 
         <div className="rounded-[20px] border border-slate-200 bg-gradient-to-br from-amber-50 to-orange-100 p-5 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] uppercase tracking-[0.32em] font-bold text-slate-500">CR Percentage</p>
-              <p className="mt-4 text-3xl font-extrabold tracking-tight text-slate-950">{timeBasedStats.cr}%</p>
+              <p className="mt-4 text-3xl font-extrabold tracking-tight text-slate-950">{statsLoading ? '—' : `${stats.cr}%`}</p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/90 text-orange-600 shadow-sm">
               <Percent className="w-5 h-5" />
             </div>
           </div>
-          <p className="mt-4 text-sm text-slate-600 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-amber-600" />
-            Stable conversion trend
-          </p>
+          <p className="mt-4 text-xs text-slate-500 font-mono">Conversion rate</p>
         </div>
 
         <div className="rounded-[20px] border border-slate-200 bg-gradient-to-br from-pink-50 to-rose-100 p-5 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] uppercase tracking-[0.32em] font-bold text-slate-500">Average EPC</p>
-              <p className="mt-4 text-3xl font-extrabold tracking-tight text-slate-950">${timeBasedStats.epc.toFixed(2)}</p>
+              <p className="mt-4 text-3xl font-extrabold tracking-tight text-slate-950">{statsLoading ? '—' : `$${Number(stats.epc).toFixed(2)}`}</p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/90 text-pink-600 shadow-sm">
               <TrendingUp className="w-5 h-5" />
             </div>
           </div>
-          <p className="mt-4 text-sm text-slate-600 flex items-center gap-2">
-            <TrendingDown className="w-4 h-4 text-rose-500" />
-            Slight EPC contraction
-          </p>
+          <p className="mt-4 text-xs text-slate-500 font-mono">Earnings per click</p>
         </div>
 
         <div className="rounded-[20px] border border-slate-200 bg-gradient-to-br from-blue-50 to-cyan-100 p-5 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl cursor-pointer" onClick={() => onNavigate("wallet") }>
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] uppercase tracking-[0.32em] font-bold text-slate-500">Holds / Pending</p>
-              <p className="mt-4 text-3xl font-extrabold tracking-tight text-slate-950">${timeBasedStats.pending.toLocaleString("en-US", { minimumFractionDigits: 2 })}</p>
+              <p className="mt-4 text-3xl font-extrabold tracking-tight text-slate-950">{statsLoading ? '—' : `$${Number(stats.pending_balance).toLocaleString("en-US", { minimumFractionDigits: 2 })}`}</p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/90 text-sky-600 shadow-sm">
               <Activity className="w-5 h-5" />
@@ -235,109 +242,49 @@ export function PublisherDashboardView({ onNavigate }: { onNavigate: (screen: st
               </div>
             </div>
 
-            {/* Custom Interactive SVG Chart */}
-            <div className="bg-slate-50 border border-slate-200 rounded-[18px] p-4 min-h-[240px]">
-              <svg className="w-full h-48 select-none overflow-visible" viewBox="0 0 500 200">
-                {/* Horizontal Guide Rules */}
-                <line x1="40" y1="20" x2="480" y2="20" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3,3" />
-                <line x1="40" y1="80" x2="480" y2="80" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3,3" />
-                <line x1="40" y1="140" x2="480" y2="140" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3,3" />
-                <line x1="40" y1="180" x2="480" y2="180" stroke="#e2e8f0" strokeWidth="1" />
-
-                {/* Vertical Axis labels */}
-                <text x="15" y="24" fill="#64748b" fontSize="8" fontFamily="monospace">1500</text>
-                <text x="15" y="84" fill="#64748b" fontSize="8" fontFamily="monospace">750</text>
-                <text x="15" y="144" fill="#64748b" fontSize="8" fontFamily="monospace">250</text>
-                <text x="15" y="184" fill="#64748b" fontSize="8" fontFamily="monospace">0</text>
-
-                {/* Blue Click Path Line */}
-                <path
-                  d="M 40 160 L 100 130 L 160 150 L 220 80 L 280 90 L 340 50 L 400 42 L 480 25"
-                  fill="none"
-                  stroke="#0ea5e9"
-                  strokeWidth="2.5"
-                />
-                
-                {/* Purple Conversion Path Line */}
-                <path
-                  d="M 40 178 L 100 170 L 160 174 L 220 150 L 280 152 L 340 130 L 400 122 L 480 102"
-                  fill="none"
-                  stroke="#8b5cf6"
-                  strokeWidth="2"
-                />
-
-                {/* Graph Dots */}
-                <circle cx="220" cy="80" r="4.5" fill="#22d3ee" stroke="#0f172a" strokeWidth="2" />
-                <circle cx="340" cy="50" r="4.5" fill="#22d3ee" stroke="#0f172a" strokeWidth="2" />
-                <circle cx="480" cy="25" r="4.5" fill="#22d3ee" stroke="#0f172a" strokeWidth="2" />
-
-                <circle cx="220" cy="150" r="4" fill="#818cf8" stroke="#0f172a" strokeWidth="1.5" />
-                <circle cx="480" cy="102" r="4" fill="#818cf8" stroke="#0f172a" strokeWidth="1.5" />
-
-                {/* Horizontal X axis labels */}
-                <text x="40" y="195" fill="#64748b" textAnchor="middle" fontSize="8" fontFamily="monospace">Mon</text>
-                <text x="100" y="195" fill="#64748b" textAnchor="middle" fontSize="8" fontFamily="monospace">Tue</text>
-                <text x="160" y="195" fill="#64748b" textAnchor="middle" fontSize="8" fontFamily="monospace">Wed</text>
-                <text x="220" y="195" fill="#64748b" textAnchor="middle" fontSize="8" fontFamily="monospace">Thu</text>
-                <text x="280" y="195" fill="#64748b" textAnchor="middle" fontSize="8" fontFamily="monospace">Fri</text>
-                <text x="340" y="195" fill="#64748b" textAnchor="middle" fontSize="8" fontFamily="monospace">Sat</text>
-                <text x="400" y="195" fill="#64748b" textAnchor="middle" fontSize="8" fontFamily="monospace">Sun</text>
-                <text x="480" y="195" fill="#64748b" textAnchor="middle" fontSize="8" fontFamily="monospace">Today</text>
-              </svg>
+            {/* Traffic chart — data populates once you have active offers sending traffic */}
+            <div className="bg-slate-50 border border-slate-200 rounded-[18px] p-4 min-h-[240px] flex flex-col items-center justify-center text-center gap-3">
+              <Activity className="w-8 h-8 text-slate-300" />
+              <p className="text-sm font-semibold text-slate-500">No traffic data yet</p>
+              <p className="text-xs text-slate-400 max-w-xs">Activate an offer and start sending traffic. Clicks and conversions will appear here in real time.</p>
+              <button
+                onClick={() => onNavigate("marketplace")}
+                className="mt-1 text-xs font-semibold text-cyan-600 hover:text-cyan-700 flex items-center gap-1 transition"
+              >
+                Browse offers <ExternalLink className="w-3 h-3" />
+              </button>
             </div>
           </div>
 
-          {/* QUICK LINKS FOR OFFERS WORKSPACE */}
+          {/* OFFER WORKSPACE QUICK LINKS */}
           <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <h3 className="text-slate-950 text-sm font-extrabold uppercase font-mono tracking-wider">
-                  Top Recommended Campaigns
+                  Offer Marketplace
                 </h3>
                 <p className="text-sm text-slate-600">
-                  Offers with the highest EPC ratings in your geo cluster over the past 48 hours.
+                  Browse available campaigns and join offers matching your traffic sources.
                 </p>
               </div>
               <button
                 onClick={() => onNavigate("marketplace")}
                 className="text-xs text-cyan-600 hover:text-cyan-700 font-semibold flex items-center gap-1 font-mono"
               >
-                Browse Marketplace <ChevronRight className="w-3.5 h-3.5" />
+                Browse All <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col justify-between space-y-3 hover:border-cyan-500/20 transition cursor-pointer" onClick={() => onNavigate("marketplace")}>
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1 min-w-0">
-                    <span className="bg-emerald-100 text-emerald-700 text-[9px] font-bold px-1.5 py-0.5 rounded font-mono uppercase tracking-wide">
-                      HIGH CR (4.6%)
-                    </span>
-                    <strong className="text-slate-950 text-xs block truncate pt-1">NordVPN Secure CPA</strong>
-                  </div>
-                  <span className="text-cyan-600 text-xs font-black font-mono tracking-wider shrink-0">$3.80 CPA</span>
-                </div>
-                <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono">
-                  <span>Geos: US, CA, EU</span>
-                  <span>EPC: $0.18</span>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col justify-between space-y-3 hover:border-cyan-500/20 transition cursor-pointer" onClick={() => onNavigate("marketplace")}>
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1 min-w-0">
-                    <span className="bg-indigo-100 text-indigo-700 text-[9px] font-bold px-1.5 py-0.5 rounded font-mono uppercase tracking-wide">
-                      HIGH PAYOUT ($28)
-                    </span>
-                    <strong className="text-slate-950 text-xs block truncate pt-1">FastHomeLoan Zip Leads</strong>
-                  </div>
-                  <span className="text-cyan-600 text-xs font-black font-mono tracking-wider shrink-0">$28.00 CPL</span>
-                </div>
-                <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono">
-                  <span>Geos: US, CA Only</span>
-                  <span>EPC: $1.86</span>
-                </div>
-              </div>
+            <div
+              className="bg-slate-50 border border-slate-200 rounded-xl p-8 flex flex-col items-center justify-center text-center gap-3 cursor-pointer hover:border-cyan-300 transition"
+              onClick={() => onNavigate("marketplace")}
+            >
+              <CheckCircle className="w-8 h-8 text-slate-300" />
+              <p className="text-sm font-semibold text-slate-500">Find your first offer</p>
+              <p className="text-xs text-slate-400 max-w-xs">Join available campaigns from the marketplace and start generating commissions.</p>
+              <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-cyan-600">
+                Go to Marketplace <ChevronRight className="w-3.5 h-3.5" />
+              </span>
             </div>
           </div>
 
@@ -359,21 +306,17 @@ export function PublisherDashboardView({ onNavigate }: { onNavigate: (screen: st
                   Real-time event stream with status indicators and traffic source context.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={handleSimulateClick}
-                className="inline-flex items-center gap-2 rounded-full bg-cyan-600 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-white shadow-lg transition hover:bg-cyan-500"
-              >
-                <Play className="w-3.5 h-3.5 text-white" />
-                Fire Hit
-              </button>
             </div>
 
-            {/* Simulated Live Feed Log */}
+            {/* Live redirect event stream */}
             <div className="space-y-3 max-h-[290px] overflow-y-auto scrollbar-thin" id="traffic-stream-scroll">
-              {trafficFeed.map((log, li) => {
+              {trafficFeed.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center gap-2">
+                  <Clock className="w-7 h-7 text-slate-300" />
+                  <p className="text-xs text-slate-400">No events yet. Send traffic through your tracking links to see live redirects here.</p>
+                </div>
+              ) : trafficFeed.map((log, li) => {
                 const isConv = log.type === "lead" || log.type === "sale";
-                
                 return (
                   <div
                     key={li}
@@ -404,14 +347,12 @@ export function PublisherDashboardView({ onNavigate }: { onNavigate: (screen: st
                         </span>
                       )}
                     </div>
-
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <strong className="text-slate-950 truncate font-medium">{log.offer}</strong>
                       <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-2 py-1 text-[9px] text-slate-600 font-mono">
                         GEO: {log.geo}
                       </span>
                     </div>
-
                     <div className="flex flex-wrap items-center justify-between gap-2 text-[9px] text-slate-500 font-mono">
                       <span>sub1={log.sub1 || "none"}</span>
                       {log.error && <span className="text-rose-600 font-bold italic">{log.error}</span>}
@@ -421,39 +362,17 @@ export function PublisherDashboardView({ onNavigate }: { onNavigate: (screen: st
               })}
             </div>
 
-            <span className="text-[10px] text-slate-500 font-mono block text-center pt-2 border-t border-slate-200 select-none">
-              Double-entry secure cryptographical logging
-            </span>
-
           </div>
 
-          {/* GEOTARGETING CHART CHIPS */}
+          {/* GEOGRAPHIC PERFORMANCE */}
           <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3.5 shadow-sm">
-            <h3 className="text-slate-950 text-xs font-bold uppercase font-mono tracking-wider">
-              Top Geographic Performance
+            <h3 className="text-slate-950 text-xs font-bold uppercase font-mono tracking-wider flex items-center gap-2">
+              <MapPin className="w-3.5 h-3.5 text-cyan-500" />
+              Geographic Performance
             </h3>
-            
-            <div className="space-y-2.5">
-              {[
-                { name: "United States", code: "US", clickShare: 52, convs: 322, leadColor: "w-[52%]" },
-                { name: "Germany", code: "DE", clickShare: 18, convs: 112, leadColor: "w-[18%]" },
-                { name: "United Kingdom", code: "GB", clickShare: 14, convs: 84, leadColor: "w-[14%]" },
-                { name: "Canada", code: "CA", clickShare: 10, convs: 48, leadColor: "w-[10%]" },
-                { name: "Singapore", code: "SG", clickShare: 6, convs: 22, leadColor: "w-[6%]" }
-              ].map((geo, gidx) => (
-                <div key={gidx} className="space-y-1">
-                  <div className="flex justify-between text-xs text-slate-500">
-                    <span className="flex items-center gap-1 text-[11px]">
-                      <MapPin className="w-3 h-3 text-slate-500" />
-                      <strong>{geo.name}</strong> ({geo.code})
-                    </span>
-                    <span className="font-mono text-cyan-600 font-bold">{geo.convs} conversions</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className={`h-full bg-cyan-400 ${geo.leadColor} rounded-full`}></div>
-                  </div>
-                </div>
-              ))}
+            <div className="flex flex-col items-center justify-center py-6 text-center gap-2">
+              <Globe className="w-7 h-7 text-slate-300" />
+              <p className="text-xs text-slate-400">No geo data yet. Send traffic through your tracking links to see geographic breakdown.</p>
             </div>
           </div>
 

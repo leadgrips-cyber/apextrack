@@ -2,6 +2,7 @@ export type PostbackStatus = 'pending' | 'approved' | 'rejected';
 
 export interface PostbackRequestPayload {
   click_id: string;
+  event?: string;         // event_token — when present triggers event-based flow
   payout: string;
   revenue: string;
   status: PostbackStatus;
@@ -13,9 +14,13 @@ export interface ConversionRecord {
   click_id: string;
   offer_id: number;
   publisher_id: string;
+  offer_event_id: string | null;
   conversion_type: string;
   conversion_status: string;
   event_timestamp: string;
+  validated_at: string | null;
+  rejected_at: string | null;
+  rejection_reason: string | null;
   payout_amount: string;
   revenue_amount: string;
   currency: string;

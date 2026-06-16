@@ -327,7 +327,7 @@ export function AffiliateListView({
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
+      <div>
         {loading ? (
           <div className="py-16 text-center text-sm theme-text-muted">Loading affiliates...</div>
         ) : error ? (
@@ -368,7 +368,7 @@ export function AffiliateListView({
                           {isActing ? "Working..." : "Actions"}
                           <ChevronDown className="h-4 w-4" />
                         </summary>
-                        <div className="absolute right-0 z-10 mt-2 w-56 overflow-hidden rounded-3xl border theme-border bg-white text-left shadow-xl">
+                        <div className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-3xl border theme-border bg-white text-left shadow-xl">
                           <button
                             onClick={() => onViewProfile?.(affiliate)}
                             className="w-full px-4 py-3 text-left text-sm theme-text-main hover:bg-slate-50 transition"

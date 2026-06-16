@@ -1,500 +1,291 @@
-import React, { useState, useMemo } from "react";
-import { Search, Filter, ArrowRight, Link2, Unlink2, CheckCircle } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Search, CheckCircle, ArrowRight, Unlink2 } from "lucide-react";
+import { listManagers, bulkAssignPublishers, type ManagerRecord } from "../../services/managers";
 
-type AffiliateStatus = "Active" | "Inactive" | "Pending";
-
-interface Affiliate {
+interface Publisher {
   id: string;
-  name: string;
-  country: string;
-  status: AffiliateStatus;
-  currentManager: string;
-  revenue: number;
-  commissionRate: number;
-}
-
-interface Manager {
-  id: string;
-  name: string;
   email: string;
-  region: string;
-  currentAffiliateCount: number;
-  maximumAllowedAffiliates: number;
+  full_name: string;
+  company_name: string | null;
+  country_code: string | null;
+  account_status: string;
+  assigned_manager_id: string | null;
+  manager_name: string | null;
 }
 
-interface AssignmentHistory {
-  id: string;
-  date: string;
-  affiliate: string;
-  previousManager: string;
-  newManager: string;
-  assignedBy: string;
+const API_URL = "http://localhost:3000/api";
+
+async function fetchPublishers(): Promise<Publisher[]> {
+  const token = localStorage.getItem("admin_token") || "";
+  const res = await fetch(`${API_URL}/publishers?page_size=200`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`Failed to load publishers (${res.status})`);
+  const data = await res.json();
+  return (data.publishers ?? []) as Publisher[];
 }
-
-const SAMPLE_AFFILIATES: Affiliate[] = [
-  {
-    id: "AFF-001",
-    name: "Avery Chan Media",
-    country: "United States",
-    status: "Active",
-    currentManager: "Sarah Johnson",
-    revenue: 45230.50,
-    commissionRate: 25,
-  },
-  {
-    id: "AFF-002",
-    name: "Global Traffic Network",
-    country: "Canada",
-    status: "Active",
-    currentManager: "Sarah Johnson",
-    revenue: 32150.00,
-    commissionRate: 20,
-  },
-  {
-    id: "AFF-003",
-    name: "Premium Affiliates Inc",
-    country: "United Kingdom",
-    status: "Pending",
-    currentManager: "Unassigned",
-    revenue: 0,
-    commissionRate: 0,
-  },
-  {
-    id: "AFF-004",
-    name: "Digital Marketing Co",
-    country: "Germany",
-    status: "Active",
-    currentManager: "Marcus Chen",
-    revenue: 28900.75,
-    commissionRate: 22,
-  },
-  {
-    id: "AFF-005",
-    name: "Performance Traders LLC",
-    country: "Australia",
-    status: "Inactive",
-    currentManager: "Unassigned",
-    revenue: 5200.00,
-    commissionRate: 18,
-  },
-  {
-    id: "AFF-006",
-    name: "Media Ventures Asia",
-    country: "Singapore",
-    status: "Active",
-    currentManager: "Lisa Wang",
-    revenue: 38600.25,
-    commissionRate: 24,
-  },
-  {
-    id: "AFF-007",
-    name: "Traffic Innovations",
-    country: "France",
-    status: "Active",
-    currentManager: "Sarah Johnson",
-    revenue: 22300.00,
-    commissionRate: 21,
-  },
-  {
-    id: "AFF-008",
-    name: "Direct Response Partners",
-    country: "Netherlands",
-    status: "Pending",
-    currentManager: "Unassigned",
-    revenue: 0,
-    commissionRate: 0,
-  },
-];
-
-const SAMPLE_MANAGERS: Manager[] = [
-  {
-    id: "MGR-001",
-    name: "Sarah Johnson",
-    email: "sarah.johnson@apextrack.com",
-    region: "North America",
-    currentAffiliateCount: 3,
-    maximumAllowedAffiliates: 10,
-  },
-  {
-    id: "MGR-002",
-    name: "Marcus Chen",
-    email: "marcus.chen@apextrack.com",
-    region: "APAC",
-    currentAffiliateCount: 1,
-    maximumAllowedAffiliates: 8,
-  },
-  {
-    id: "MGR-003",
-    name: "Lisa Wang",
-    email: "lisa.wang@apextrack.com",
-    region: "APAC",
-    currentAffiliateCount: 1,
-    maximumAllowedAffiliates: 8,
-  },
-  {
-    id: "MGR-004",
-    name: "James Mitchell",
-    email: "james.mitchell@apextrack.com",
-    region: "EMEA",
-    currentAffiliateCount: 0,
-    maximumAllowedAffiliates: 10,
-  },
-];
-
-const SAMPLE_ASSIGNMENT_HISTORY: AssignmentHistory[] = [
-  {
-    id: "hist-1",
-    date: "2026-06-08 15:42:00",
-    affiliate: "Media Ventures Asia",
-    previousManager: "Unassigned",
-    newManager: "Lisa Wang",
-    assignedBy: "Admin User",
-  },
-  {
-    id: "hist-2",
-    date: "2026-06-07 10:15:30",
-    affiliate: "Digital Marketing Co",
-    previousManager: "Sarah Johnson",
-    newManager: "Marcus Chen",
-    assignedBy: "Admin User",
-  },
-  {
-    id: "hist-3",
-    date: "2026-06-06 14:28:00",
-    affiliate: "Traffic Innovations",
-    previousManager: "Unassigned",
-    newManager: "Sarah Johnson",
-    assignedBy: "Admin User",
-  },
-  {
-    id: "hist-4",
-    date: "2026-06-05 09:10:45",
-    affiliate: "Global Traffic Network",
-    previousManager: "James Mitchell",
-    newManager: "Sarah Johnson",
-    assignedBy: "Admin User",
-  },
-];
 
 export function ManagerAssignView() {
+  const [publishers, setPublishers] = useState<Publisher[]>([]);
+  const [managers, setManagers] = useState<ManagerRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [actionMsg, setActionMsg] = useState<string | null>(null);
+
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<AffiliateStatus | "All">("All");
-  const [countryFilter, setCountryFilter] = useState("All");
-  const [selectedAffiliate, setSelectedAffiliate] = useState<Affiliate | null>(SAMPLE_AFFILIATES[0]);
-  const [selectedManager, setSelectedManager] = useState<Manager | null>(SAMPLE_MANAGERS[0]);
-  const [selectedAffiliates, setSelectedAffiliates] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [selectedPublisherIds, setSelectedPublisherIds] = useState<string[]>([]);
+  const [targetManagerId, setTargetManagerId] = useState("");
+  const [acting, setActing] = useState(false);
 
-  // Get unique countries
-  const countries = useMemo(
-    () => ["All", ...Array.from(new Set(SAMPLE_AFFILIATES.map((a) => a.country)))],
-    []
-  );
+  const load = () => {
+    setLoading(true);
+    setError(null);
+    Promise.all([fetchPublishers(), listManagers()])
+      .then(([pubs, mgrs]) => {
+        setPublishers(pubs);
+        setManagers(mgrs);
+        if (mgrs.length > 0) setTargetManagerId(mgrs[0].id);
+      })
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : "Failed to load data"))
+      .finally(() => setLoading(false));
+  };
 
-  // Calculate summary metrics
-  const totalAffiliates = SAMPLE_AFFILIATES.length;
-  const assignedAffiliates = SAMPLE_AFFILIATES.filter((a) => a.currentManager !== "Unassigned").length;
-  const unassignedAffiliates = totalAffiliates - assignedAffiliates;
-  const totalManagers = SAMPLE_MANAGERS.length;
+  useEffect(load, []);
 
-  // Filter affiliates
-  const filteredAffiliates = useMemo(() => {
-    return SAMPLE_AFFILIATES.filter((affiliate) => {
+  const filteredPublishers = useMemo(() => {
+    return publishers.filter((p) => {
       const matchesSearch =
-        affiliate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        affiliate.id.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === "All" || affiliate.status === statusFilter;
-      const matchesCountry = countryFilter === "All" || affiliate.country === countryFilter;
-      return matchesSearch && matchesStatus && matchesCountry;
+        p.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.email.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus =
+        statusFilter === "All" ||
+        p.account_status.toLowerCase() === statusFilter.toLowerCase();
+      return matchesSearch && matchesStatus;
     });
-  }, [searchTerm, statusFilter, countryFilter]);
+  }, [publishers, searchTerm, statusFilter]);
 
-  const getStatusColor = (status: AffiliateStatus) => {
-    switch (status) {
-      case "Active":
-        return "bg-emerald-100 text-emerald-800 border border-emerald-300";
-      case "Inactive":
-        return "bg-slate-100 text-slate-800 border border-slate-300";
-      case "Pending":
-        return "bg-amber-100 text-amber-800 border border-amber-300";
-      default:
-        return "bg-slate-100 text-slate-800";
+  const totalAssigned = publishers.filter((p) => p.assigned_manager_id).length;
+  const totalUnassigned = publishers.length - totalAssigned;
+
+  const statusBadge = (status: string) => {
+    const s = status.toUpperCase();
+    if (s === "ACTIVE") return "bg-emerald-100 text-emerald-800 border border-emerald-300";
+    if (s === "PENDING") return "bg-amber-100 text-amber-800 border border-amber-300";
+    return "bg-slate-100 text-slate-800 border border-slate-300";
+  };
+
+  const toggleSelect = (id: string) =>
+    setSelectedPublisherIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+
+  const toggleSelectAll = () => {
+    if (selectedPublisherIds.length === filteredPublishers.length && filteredPublishers.length > 0) {
+      setSelectedPublisherIds([]);
+    } else {
+      setSelectedPublisherIds(filteredPublishers.map((p) => p.id));
     }
   };
 
-  const toggleAffiliateSelection = (affiliateId: string) => {
-    setSelectedAffiliates((prev) =>
-      prev.includes(affiliateId) ? prev.filter((id) => id !== affiliateId) : [...prev, affiliateId]
-    );
+  const doAssign = async (managerId: string | null, label: string) => {
+    if (selectedPublisherIds.length === 0) return;
+    setActing(true);
+    setActionMsg(null);
+    try {
+      const count = await bulkAssignPublishers(selectedPublisherIds, managerId);
+      setActionMsg(`${label}: ${count} publisher(s) updated.`);
+      setSelectedPublisherIds([]);
+      load();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Action failed");
+    } finally {
+      setActing(false);
+    }
   };
 
-  const capacityPercentage = selectedManager
-    ? Math.round((selectedManager.currentAffiliateCount / selectedManager.maximumAllowedAffiliates) * 100)
-    : 0;
+  const selectedManager = managers.find((m) => m.id === targetManagerId) ?? null;
 
   return (
-    <div>
-      <div className="text-xs uppercase tracking-[0.24em] font-bold theme-text-muted">Managers</div>
-      <h2 className="mt-2 text-2xl font-black theme-text-main">Affiliate Assignment Management</h2>
-      <p className="mt-1 theme-text-muted text-sm">Manage affiliate-to-manager assignments and track assignment history.</p>
-
-      {/* Summary Cards */}
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="theme-bg-card border theme-border rounded-3xl p-6">
-          <h3 className="text-xs font-semibold theme-text-secondary mb-2">Total Affiliates</h3>
-          <div className="text-4xl font-black theme-text-main">{totalAffiliates}</div>
-          <p className="text-xs theme-text-muted mt-2">All affiliate accounts</p>
-        </div>
-
-        <div className="theme-bg-card border theme-border rounded-3xl p-6">
-          <h3 className="text-xs font-semibold theme-text-secondary mb-2">Assigned Affiliates</h3>
-          <div className="text-4xl font-black text-emerald-600">{assignedAffiliates}</div>
-          <p className="text-xs theme-text-muted mt-2">Active manager assignments</p>
-        </div>
-
-        <div className="theme-bg-card border theme-border rounded-3xl p-6">
-          <h3 className="text-xs font-semibold theme-text-secondary mb-2">Unassigned Affiliates</h3>
-          <div className="text-4xl font-black text-rose-600">{unassignedAffiliates}</div>
-          <p className="text-xs theme-text-muted mt-2">Pending manager assignment</p>
-        </div>
-
-        <div className="theme-bg-card border theme-border rounded-3xl p-6">
-          <h3 className="text-xs font-semibold theme-text-secondary mb-2">Total Managers</h3>
-          <div className="text-4xl font-black theme-text-main">{totalManagers}</div>
-          <p className="text-xs theme-text-muted mt-2">Active account managers</p>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <div className="text-xs uppercase tracking-[0.24em] font-bold theme-text-muted">Managers</div>
+        <h2 className="mt-2 text-2xl font-black theme-text-main">Affiliate Assignment Management</h2>
+        <p className="mt-1 theme-text-muted text-sm">Assign, transfer, or remove publisher-to-manager assignments.</p>
       </div>
 
-      {/* Main Assignment Panel */}
-      <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Affiliate Table */}
-        <div className="lg:col-span-2 theme-bg-card border theme-border rounded-3xl p-6">
-          <h3 className="text-sm font-bold theme-text-main mb-4">Affiliate Directory</h3>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          ["Total Publishers", publishers.length, "theme-text-main"],
+          ["Assigned", totalAssigned, "text-emerald-600"],
+          ["Unassigned", totalUnassigned, "text-rose-600"],
+          ["Managers", managers.length, "theme-text-main"],
+        ].map(([label, val, cls]) => (
+          <div key={label as string} className="theme-bg-card border theme-border rounded-3xl p-5">
+            <div className="text-xs font-semibold theme-text-secondary">{label as string}</div>
+            <div className={`text-3xl font-black mt-2 ${cls as string}`}>{val as number}</div>
+          </div>
+        ))}
+      </div>
 
-          {/* Search and Filters */}
-          <div className="mb-4 space-y-3">
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-3 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search by affiliate name or ID..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 theme-bg-well border theme-border rounded-xl text-sm theme-text-main placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-              />
-            </div>
+      {error && (
+        <div className="rounded-2xl bg-rose-50 border border-rose-200 px-5 py-4 text-sm text-rose-700">{error}</div>
+      )}
+      {actionMsg && (
+        <div className="rounded-2xl bg-emerald-50 border border-emerald-200 px-5 py-4 text-sm text-emerald-800 font-semibold">{actionMsg}</div>
+      )}
 
-            <div className="grid grid-cols-2 gap-3">
+      {loading ? (
+        <div className="theme-bg-card border theme-border rounded-3xl p-8 text-center text-sm theme-text-muted">Loading…</div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 theme-bg-card border theme-border rounded-3xl p-6">
+            <h3 className="text-sm font-bold theme-text-main mb-4">Publisher Directory</h3>
+            <div className="mb-4 space-y-3">
+              <div className="relative">
+                <Search size={16} className="absolute left-3 top-3 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search by name or email…"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 theme-bg-well border theme-border rounded-xl text-sm theme-text-main focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                />
+              </div>
               <div>
-                <label className="block text-xs font-semibold theme-text-secondary mb-1">Status</label>
+                <label className="text-xs font-semibold theme-text-secondary block mb-1">Status</label>
                 <select
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as AffiliateStatus | "All")}
-                  className="w-full px-2 py-2 theme-bg-well border theme-border rounded-xl text-xs theme-text-main focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full px-2 py-2 theme-bg-well border theme-border rounded-xl text-xs theme-text-main focus:outline-none"
                 >
                   <option value="All">All Statuses</option>
                   <option value="Active">Active</option>
                   <option value="Pending">Pending</option>
-                  <option value="Inactive">Inactive</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold theme-text-secondary mb-1">Country</label>
-                <select
-                  value={countryFilter}
-                  onChange={(e) => setCountryFilter(e.target.value)}
-                  className="w-full px-2 py-2 theme-bg-well border theme-border rounded-xl text-xs theme-text-main focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                >
-                  {countries.map((country) => (
-                    <option key={country} value={country}>
-                      {country}
-                    </option>
-                  ))}
+                  <option value="Suspended">Suspended</option>
                 </select>
               </div>
             </div>
-          </div>
 
-          {/* Affiliates Table */}
-          <div className="overflow-x-auto border theme-border rounded-2xl">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b theme-border bg-opacity-50 theme-bg-well">
-                  <th className="px-3 py-3 text-left">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 cursor-pointer"
-                      checked={selectedAffiliates.length === filteredAffiliates.length && filteredAffiliates.length > 0}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedAffiliates(filteredAffiliates.map((a) => a.id));
-                        } else {
-                          setSelectedAffiliates([]);
-                        }
-                      }}
-                    />
-                  </th>
-                  <th className="text-left px-3 py-3 text-xs font-bold theme-text-secondary">ID</th>
-                  <th className="text-left px-3 py-3 text-xs font-bold theme-text-secondary">Name</th>
-                  <th className="text-left px-3 py-3 text-xs font-bold theme-text-secondary">Country</th>
-                  <th className="text-left px-3 py-3 text-xs font-bold theme-text-secondary">Status</th>
-                  <th className="text-left px-3 py-3 text-xs font-bold theme-text-secondary">Current Manager</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAffiliates.map((affiliate) => (
-                  <tr
-                    key={affiliate.id}
-                    className="border-b theme-border hover:bg-opacity-50 hover:theme-bg-well transition-colors cursor-pointer"
-                    onClick={() => setSelectedAffiliate(affiliate)}
-                  >
-                    <td className="px-3 py-3">
+            <div className="border theme-border rounded-2xl overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b theme-border theme-bg-well">
+                    <th className="px-3 py-3">
                       <input
                         type="checkbox"
                         className="w-4 h-4 cursor-pointer"
-                        checked={selectedAffiliates.includes(affiliate.id)}
-                        onChange={() => toggleAffiliateSelection(affiliate.id)}
-                        onClick={(e) => e.stopPropagation()}
+                        checked={selectedPublisherIds.length === filteredPublishers.length && filteredPublishers.length > 0}
+                        onChange={toggleSelectAll}
                       />
-                    </td>
-                    <td className="px-3 py-3 text-xs font-mono theme-text-main">{affiliate.id}</td>
-                    <td className="px-3 py-3 text-xs font-semibold theme-text-main">{affiliate.name}</td>
-                    <td className="px-3 py-3 text-xs theme-text-main">{affiliate.country}</td>
-                    <td className="px-3 py-3">
-                      <span className={`inline-block px-2 py-1 rounded text-xs font-bold ${getStatusColor(affiliate.status)}`}>
-                        {affiliate.status}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3 text-xs theme-text-main font-semibold">{affiliate.currentManager}</td>
+                    </th>
+                    {["Name", "Email", "Status", "Current Manager"].map((h) => (
+                      <th key={h} className="text-left px-3 py-3 text-xs font-bold theme-text-secondary">{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredPublishers.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-6 text-center text-sm theme-text-muted">No publishers match filters.</td>
+                    </tr>
+                  ) : (
+                    filteredPublishers.map((p) => (
+                      <tr
+                        key={p.id}
+                        className="border-b theme-border hover:theme-bg-well cursor-pointer transition-colors"
+                        onClick={() => toggleSelect(p.id)}
+                      >
+                        <td className="px-3 py-3">
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 cursor-pointer"
+                            checked={selectedPublisherIds.includes(p.id)}
+                            onChange={() => toggleSelect(p.id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </td>
+                        <td className="px-3 py-3 text-xs font-semibold theme-text-main">{p.full_name}</td>
+                        <td className="px-3 py-3 text-xs font-mono theme-text-muted">{p.email}</td>
+                        <td className="px-3 py-3">
+                          <span className={`inline-block px-2 py-1 rounded text-xs font-bold ${statusBadge(p.account_status)}`}>
+                            {p.account_status}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-xs theme-text-main">
+                          {p.manager_name ?? <span className="theme-text-muted italic">Unassigned</span>}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs theme-text-muted mt-3">
+              Showing {filteredPublishers.length} of {publishers.length} publishers • {selectedPublisherIds.length} selected
+            </p>
           </div>
-          <p className="text-xs theme-text-muted mt-3">
-            Showing {filteredAffiliates.length} of {totalAffiliates} affiliates • {selectedAffiliates.length} selected
-          </p>
-        </div>
 
-        {/* Right: Manager Details Card */}
-        <div className="theme-bg-card border theme-border rounded-3xl p-6 h-fit">
-          <h3 className="text-sm font-bold theme-text-main mb-4">Manager Details</h3>
-
-          {selectedManager ? (
-            <div className="space-y-4">
-              <div>
-                <p className="text-xs font-semibold theme-text-secondary mb-1">Manager Name</p>
-                <p className="text-sm font-bold theme-text-main">{selectedManager.name}</p>
-              </div>
-
-              <div>
-                <p className="text-xs font-semibold theme-text-secondary mb-1">Email</p>
-                <p className="text-xs theme-text-main font-mono break-all">{selectedManager.email}</p>
-              </div>
-
-              <div>
-                <p className="text-xs font-semibold theme-text-secondary mb-1">Region</p>
-                <p className="text-sm theme-text-main">{selectedManager.region}</p>
-              </div>
-
-              <div>
-                <p className="text-xs font-semibold theme-text-secondary mb-2">Affiliate Capacity</p>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-xs theme-text-main font-semibold">
-                      {selectedManager.currentAffiliateCount} / {selectedManager.maximumAllowedAffiliates}
-                    </span>
-                    <span className="text-xs font-bold text-cyan-600">{capacityPercentage}%</span>
-                  </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                    <div
-                      className={`h-full transition-all ${
-                        capacityPercentage > 80 ? "bg-rose-500" : capacityPercentage > 50 ? "bg-amber-500" : "bg-emerald-500"
-                      }`}
-                      style={{ width: `${capacityPercentage}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t theme-border">
+          <div className="theme-bg-card border theme-border rounded-3xl p-6 h-fit space-y-4">
+            <h3 className="text-sm font-bold theme-text-main">Target Manager</h3>
+            {managers.length === 0 ? (
+              <p className="text-xs theme-text-muted">No managers found. Create one first.</p>
+            ) : (
+              <>
                 <select
-                  value={selectedManager.id}
-                  onChange={(e) => {
-                    const manager = SAMPLE_MANAGERS.find((m) => m.id === e.target.value);
-                    if (manager) setSelectedManager(manager);
-                  }}
-                  className="w-full px-3 py-2 theme-bg-well border theme-border rounded-xl text-xs theme-text-main focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  value={targetManagerId}
+                  onChange={(e) => setTargetManagerId(e.target.value)}
+                  className="w-full px-3 py-2 theme-bg-well border theme-border rounded-xl text-sm theme-text-main focus:outline-none"
                 >
-                  {SAMPLE_MANAGERS.map((mgr) => (
-                    <option key={mgr.id} value={mgr.id}>
-                      {mgr.name} ({mgr.currentAffiliateCount}/{mgr.maximumAllowedAffiliates})
+                  {managers.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.full_name} ({m.assigned_count ?? 0} assigned)
                     </option>
                   ))}
                 </select>
-              </div>
-            </div>
-          ) : (
-            <p className="text-xs theme-text-muted">Select a manager to view details</p>
-          )}
+                {selectedManager && (
+                  <div className="space-y-2 text-xs theme-text-muted">
+                    <div><span className="font-semibold theme-text-secondary">Email: </span>{selectedManager.email}</div>
+                    {selectedManager.settings?.telegram && (
+                      <div><span className="font-semibold theme-text-secondary">Telegram: </span>{selectedManager.settings.telegram}</div>
+                    )}
+                    <div>
+                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${selectedManager.is_active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
+                        {selectedManager.is_active ? "Active" : "Disabled"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Bulk Assignment Actions */}
-      <div className="mt-6 theme-bg-card border theme-border rounded-3xl p-6">
+      <div className="theme-bg-card border theme-border rounded-3xl p-6">
         <h3 className="text-sm font-bold theme-text-main mb-4">Bulk Assignment Actions</h3>
         <div className="flex gap-3 flex-wrap">
           <button
-            disabled={!selectedManager || selectedAffiliates.length === 0}
+            disabled={!targetManagerId || selectedPublisherIds.length === 0 || acting}
+            onClick={() => doAssign(targetManagerId, "Assigned")}
             className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <CheckCircle size={16} /> Assign Selected Affiliates
           </button>
           <button
-            disabled={selectedAffiliates.length === 0}
+            disabled={!targetManagerId || selectedPublisherIds.length === 0 || acting}
+            onClick={() => doAssign(targetManagerId, "Transferred")}
             className="px-4 py-2 bg-amber-600 text-white rounded-xl text-sm font-semibold hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <ArrowRight size={16} /> Transfer To Another Manager
           </button>
           <button
-            disabled={selectedAffiliates.length === 0}
+            disabled={selectedPublisherIds.length === 0 || acting}
+            onClick={() => doAssign(null, "Unassigned")}
             className="px-4 py-2 bg-rose-600 text-white rounded-xl text-sm font-semibold hover:bg-rose-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <Unlink2 size={16} /> Remove Assignment
           </button>
-        </div>
-      </div>
-
-      {/* Assignment History Table */}
-      <div className="mt-6 theme-bg-card border theme-border rounded-3xl p-6">
-        <h3 className="text-sm font-bold theme-text-main mb-4">Assignment History</h3>
-        <div className="overflow-x-auto border theme-border rounded-2xl">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b theme-border bg-opacity-50 theme-bg-well">
-                <th className="text-left px-4 py-3 text-xs font-bold theme-text-secondary">Date</th>
-                <th className="text-left px-4 py-3 text-xs font-bold theme-text-secondary">Affiliate</th>
-                <th className="text-left px-4 py-3 text-xs font-bold theme-text-secondary">Previous Manager</th>
-                <th className="text-left px-4 py-3 text-xs font-bold theme-text-secondary">New Manager</th>
-                <th className="text-left px-4 py-3 text-xs font-bold theme-text-secondary">Assigned By</th>
-                <th className="text-left px-4 py-3 text-xs font-bold theme-text-secondary">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {SAMPLE_ASSIGNMENT_HISTORY.map((history) => (
-                <tr key={history.id} className="border-b theme-border hover:bg-opacity-50 hover:theme-bg-well transition-colors">
-                  <td className="px-4 py-3 text-xs font-mono theme-text-main">{history.date}</td>
-                  <td className="px-4 py-3 text-xs font-semibold theme-text-main">{history.affiliate}</td>
-                  <td className="px-4 py-3 text-xs theme-text-main">{history.previousManager}</td>
-                  <td className="px-4 py-3 text-xs font-semibold text-emerald-600">{history.newManager}</td>
-                  <td className="px-4 py-3 text-xs theme-text-main">{history.assignedBy}</td>
-                  <td className="px-4 py-3">
-                    <button className="text-cyan-600 hover:text-cyan-700 font-semibold text-xs">View</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </div>
     </div>
