@@ -93,9 +93,10 @@ export async function insertOffer(payload: OfferCreatePayload & { created_by_adm
        admin_notes,
        advertiser_id,
        created_by_admin_id,
+       affiliate_revenue_share_percent,
        created_at,
        updated_at
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,NOW(),NOW())
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,NOW(),NOW())
      RETURNING id`,
     [
       payload.name,
@@ -122,6 +123,7 @@ export async function insertOffer(payload: OfferCreatePayload & { created_by_adm
       payload.admin_notes || null,
       payload.advertiser_id || null,
       payload.created_by_admin_id,
+      payload.affiliate_revenue_share_percent ?? null,
     ]
   );
   const inserted = await findOfferById(result.rows[0].id);
@@ -147,6 +149,7 @@ export async function updateOfferById(offerId: number, updates: OfferUpdatePaylo
   if (updates.payout_amount !== undefined) addField('payout_amount', updates.payout_amount);
   if (updates.advertiser_payout !== undefined) addField('advertiser_payout', updates.advertiser_payout);
   if (updates.affiliate_payout  !== undefined) addField('affiliate_payout',  updates.affiliate_payout);
+  if (updates.affiliate_revenue_share_percent !== undefined) addField('affiliate_revenue_share_percent', updates.affiliate_revenue_share_percent ?? null);
   if (updates.currency !== undefined) addField('currency', updates.currency);
   if (updates.target_geos !== undefined) addField('target_geos', updates.target_geos);
   if (updates.target_devices !== undefined) addField('target_devices', updates.target_devices);

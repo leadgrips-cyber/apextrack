@@ -8,7 +8,7 @@ const INPUT = "w-full rounded-xl border theme-border bg-white dark:bg-slate-900 
 const LABEL = "block text-[10px] font-bold uppercase tracking-[0.18em] theme-text-muted mb-1.5";
 const SECTION = "theme-bg-card border theme-border rounded-2xl p-5 space-y-4";
 
-const PAYOUT_TYPES  = ["CPA", "CPL", "CPS", "CPC", "CPI", "CPM", "Rev Share"];
+const PAYOUT_TYPES  = ["CPA", "CPL", "CPS", "CPC", "CPI", "CPM", "REVENUE_SHARE"];
 const CURRENCIES    = ["USD", "EUR", "GBP", "CAD", "AUD"];
 const DEVICES       = ["desktop", "mobile", "tablet"];
 const TRACKING_PROTOCOLS = ["S2S", "COOKIE", "PIXEL", "SERVER"];
@@ -20,6 +20,7 @@ const EMPTY: OfferFormPayload = {
   payout_amount: 0,
   advertiser_payout: 0,
   affiliate_payout: 0,
+  affiliate_revenue_share_percent: null,
   currency: "USD",
   landing_page_url: "",
   preview_url: "",
@@ -82,13 +83,22 @@ export function OfferCreateView() {
     if (!form.landing_page_url.trim()) { setError("Landing page URL is required."); return; }
     if (!form.payout_type) { setError("Payout type is required."); return; }
 
+    const isRevShare = form.payout_type === "REVENUE_SHARE";
+    if (isRevShare && !form.affiliate_revenue_share_percent) {
+      setError("Revenue Share % is required."); return;
+    }
+
     setSaving(true);
     setError(null);
     setSuccess(null);
     try {
+      const affiliatePayout = isRevShare ? 0 : (form.affiliate_payout ?? 0);
       const payload: OfferFormPayload = {
         ...form,
-        payout_amount:  form.affiliate_payout ?? 0,
+        payout_amount:  affiliatePayout,
+        advertiser_payout: isRevShare ? 0 : (form.advertiser_payout ?? 0),
+        affiliate_payout: affiliatePayout,
+        affiliate_revenue_share_percent: isRevShare ? (form.affiliate_revenue_share_percent ?? null) : null,
         advertiser_id:  form.advertiser_id || null,
         preview_url:    form.preview_url    || undefined,
         admin_notes:    form.admin_notes    || undefined,
@@ -192,7 +202,9 @@ export function OfferCreateView() {
           <div>
             <label className={LABEL}>Payout Type <span className="text-rose-500">*</span></label>
             <select value={form.payout_type} onChange={e => set("payout_type", e.target.value)} className={INPUT}>
-              {PAYOUT_TYPES.map(p => <option key={p} value={p}>{p}</option>)}
+              {PAYOUT_TYPES.map(p => (
+                <option key={p} value={p}>{p === "REVENUE_SHARE" ? "Revenue Share" : p}</option>
+              ))}
             </select>
           </div>
 
@@ -212,32 +224,53 @@ export function OfferCreateView() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        {form.payout_type === "REVENUE_SHARE" ? (
           <div>
-            <label className={LABEL}>Advertiser Payout (what advertiser pays you)</label>
+            <label className={LABEL}>Affiliate Revenue Share % <span className="text-rose-500">*</span></label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-mono">$</span>
-              <input type="number" min="0" step="0.01"
-                value={form.advertiser_payout ?? 0}
-                onChange={e => set("advertiser_payout", parseFloat(e.target.value) || 0)}
-                className={`${INPUT} pl-7`} placeholder="0.00" />
+              <input type="number" min="0" max="100" step="0.01"
+                value={form.affiliate_revenue_share_percent ?? ""}
+                onChange={e => set("affiliate_revenue_share_percent", parseFloat(e.target.value) || null)}
+                className={INPUT} placeholder="e.g. 30" />
+            </div>
+            <p className="mt-1 text-[11px] theme-text-muted">Affiliate earns this % of the revenue the advertiser reports per conversion.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={LABEL}>Advertiser Payout (what advertiser pays you)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-mono">$</span>
+                <input type="number" min="0" step="0.01"
+                  value={form.advertiser_payout ?? 0}
+                  onChange={e => set("advertiser_payout", parseFloat(e.target.value) || 0)}
+                  className={`${INPUT} pl-7`} placeholder="0.00" />
+              </div>
+            </div>
+
+            <div>
+              <label className={LABEL}>Affiliate Payout (what affiliate earns)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-mono">$</span>
+                <input type="number" min="0" step="0.01"
+                  value={form.affiliate_payout ?? 0}
+                  onChange={e => setAffiliatePayout(parseFloat(e.target.value) || 0)}
+                  className={`${INPUT} pl-7`} placeholder="0.00" />
+              </div>
             </div>
           </div>
+        )}
 
-          <div>
-            <label className={LABEL}>Affiliate Payout (what affiliate earns)</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-mono">$</span>
-              <input type="number" min="0" step="0.01"
-                value={form.affiliate_payout ?? 0}
-                onChange={e => setAffiliatePayout(parseFloat(e.target.value) || 0)}
-                className={`${INPUT} pl-7`} placeholder="0.00" />
-            </div>
+        {/* Margin / Revenue Share preview */}
+        {form.payout_type === "REVENUE_SHARE" && (form.affiliate_revenue_share_percent ?? 0) > 0 && (
+          <div className="rounded-xl bg-slate-50 dark:bg-slate-900 border theme-border px-4 py-3 flex items-center justify-between text-sm">
+            <span className="theme-text-muted text-xs font-semibold uppercase tracking-widest">Revenue Share</span>
+            <span className="font-black font-mono text-emerald-600">
+              {Number(form.affiliate_revenue_share_percent).toFixed(2)}% of advertiser revenue
+            </span>
           </div>
-        </div>
-
-        {/* Margin preview */}
-        {((form.advertiser_payout ?? 0) > 0 || (form.affiliate_payout ?? 0) > 0) && (
+        )}
+        {form.payout_type !== "REVENUE_SHARE" && ((form.advertiser_payout ?? 0) > 0 || (form.affiliate_payout ?? 0) > 0) && (
           <div className="rounded-xl bg-slate-50 dark:bg-slate-900 border theme-border px-4 py-3 flex items-center justify-between text-sm">
             <span className="theme-text-muted text-xs font-semibold uppercase tracking-widest">Network Margin</span>
             <span className={`font-black font-mono ${

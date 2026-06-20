@@ -122,9 +122,17 @@ export async function handlePostback(payload: PostbackRequestPayload, rawPayload
 
   // ── Legacy flow (no event param) ────────────────────────────────────────────
   const advertiserStatus = validateStatus(payload.status);
-  const payoutAmount  = parseNumericValue(payload.payout, 'payout');
   const revenueAmount = parseNumericValue(payload.revenue, 'revenue');
   const transactionId = payload.transaction_id;
+
+  const legacyOfferFinancials = await postbackRepository.findOfferPayoutAmount(click.offer_id);
+  let payoutAmount: number;
+  if (legacyOfferFinancials?.payout_type === 'REVENUE_SHARE') {
+    const sharePercent = Number(legacyOfferFinancials.affiliate_revenue_share_percent ?? 0);
+    payoutAmount = revenueAmount * (sharePercent / 100);
+  } else {
+    payoutAmount = parseNumericValue(payload.payout, 'payout');
+  }
   if (!transactionId) throw new Error('transaction_id is required');
 
   const alreadyExists = await postbackRepository.conversionExists(payload.click_id);

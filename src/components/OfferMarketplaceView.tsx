@@ -797,8 +797,17 @@ export function OfferMarketplaceView({
                 Approved Payout Rate
               </span>
               <div className="flex items-baseline gap-1 text-cyan-300">
-                <span className="text-3xl font-black font-mono">${currentOffer.payoutValue.toFixed(2)}</span>
-                <span className="text-xs font-bold font-mono uppercase text-slate-400">/{currentOffer.payoutType}</span>
+                {currentOffer.payoutType === "REVENUE_SHARE" ? (
+                  <>
+                    <span className="text-3xl font-black font-mono">{Number((currentOffer as any).affiliate_revenue_share_percent ?? 0).toFixed(2)}%</span>
+                    <span className="text-xs font-bold font-mono uppercase text-slate-400">Rev Share</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-3xl font-black font-mono">${currentOffer.payoutValue.toFixed(2)}</span>
+                    <span className="text-xs font-bold font-mono uppercase text-slate-400">/{currentOffer.payoutType}</span>
+                  </>
+                )}
               </div>
             </div>
 
@@ -1484,12 +1493,14 @@ export function OfferMarketplaceView({
 
                       {/* Type */}
                       <td className="px-4 py-3.5 text-center font-mono text-slate-400 uppercase font-bold text-[10px]">
-                        {offer.payoutType}
+                        {offer.payoutType === "REVENUE_SHARE" ? "Rev Share" : offer.payoutType}
                       </td>
 
                       {/* Payout */}
                       <td className="px-4 py-3.5 font-mono text-slate-900 font-extrabold text-[13px]">
-                        ${offer.payoutValue.toFixed(2)}
+                        {offer.payoutType === "REVENUE_SHARE"
+                          ? `${Number((offer as any).affiliate_revenue_share_percent ?? 0).toFixed(2)}%`
+                          : `$${offer.payoutValue.toFixed(2)}`}
                       </td>
 
                       {/* Caps */}

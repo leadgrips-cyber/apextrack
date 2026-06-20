@@ -106,8 +106,17 @@ export function MyOffersView({ setSelectedOfferId }: MyOffersViewProps) {
                       <span className="text-xs text-slate-400 font-mono uppercase tracking-wide">{offer.category}</span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <span className="font-bold text-emerald-400 text-xs">${offer.payoutValue.toFixed(2)}</span>
-                      <span className="text-[10px] text-slate-500 ml-1">/{offer.payoutType}</span>
+                      {offer.payoutType === "REVENUE_SHARE" ? (
+                        <>
+                          <span className="font-bold text-emerald-400 text-xs">{Number(offer.affiliate_revenue_share_percent ?? 0).toFixed(2)}%</span>
+                          <span className="text-[10px] text-slate-500 ml-1">Rev Share</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="font-bold text-emerald-400 text-xs">${offer.payoutValue.toFixed(2)}</span>
+                          <span className="text-[10px] text-slate-500 ml-1">/{offer.payoutType}</span>
+                        </>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-xs text-slate-400 font-mono">{offer.caps.split(" ")[0]}</span>

@@ -16,6 +16,7 @@ export interface OfferRecord {
   payout_amount: number;
   advertiser_payout: number;
   affiliate_payout: number;
+  affiliate_revenue_share_percent?: number | null;
   currency: string;
   target_geos: string[];
   target_devices: string[];
@@ -41,6 +42,7 @@ export interface OfferFormPayload {
   payout_amount: number;
   advertiser_payout?: number;
   affiliate_payout?: number;
+  affiliate_revenue_share_percent?: number | null;
   currency: string;
   landing_page_url: string;
   preview_url?: string;

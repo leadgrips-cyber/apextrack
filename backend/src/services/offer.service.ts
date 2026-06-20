@@ -82,6 +82,9 @@ export async function createOffer(payload: OfferCreatePayload, adminId: string) 
     requires_publisher_approval: normalizeBoolean(payload.requires_publisher_approval),
     payout_type: payload.payout_type.trim(),
     payout_amount: payload.payout_amount,
+    advertiser_payout: payload.advertiser_payout ?? payload.payout_amount,
+    affiliate_payout: payload.affiliate_payout ?? payload.payout_amount,
+    affiliate_revenue_share_percent: payload.affiliate_revenue_share_percent ?? null,
     currency: payload.currency?.trim() || 'USD',
     target_geos: normalizeStringArray(payload.target_geos),
     target_devices: normalizeStringArray(payload.target_devices),
@@ -114,6 +117,9 @@ export async function updateOffer(offerId: number, payload: OfferUpdatePayload) 
   if (payload.requires_publisher_approval !== undefined) updates.requires_publisher_approval = normalizeBoolean(payload.requires_publisher_approval);
   if (payload.payout_type !== undefined) updates.payout_type = payload.payout_type.trim();
   if (payload.payout_amount !== undefined) updates.payout_amount = payload.payout_amount;
+  if (payload.advertiser_payout !== undefined) updates.advertiser_payout = payload.advertiser_payout;
+  if (payload.affiliate_payout !== undefined) updates.affiliate_payout = payload.affiliate_payout;
+  if (payload.affiliate_revenue_share_percent !== undefined) updates.affiliate_revenue_share_percent = payload.affiliate_revenue_share_percent;
   if (payload.currency !== undefined) updates.currency = payload.currency.trim();
   if (payload.target_geos !== undefined) updates.target_geos = normalizeStringArray(payload.target_geos);
   if (payload.target_devices !== undefined) updates.target_devices = normalizeStringArray(payload.target_devices);

@@ -44,6 +44,7 @@ function offerToForm(offer: OfferRecord) {
     payout_amount: String(offer.payout_amount),
     advertiser_payout: String(offer.advertiser_payout ?? offer.payout_amount),
     affiliate_payout: String(offer.affiliate_payout ?? offer.payout_amount),
+    affiliate_revenue_share_percent: String(offer.affiliate_revenue_share_percent ?? ""),
     currency: offer.currency,
     landing_page_url: offer.landing_page_url,
     preview_url: offer.preview_url || "",
@@ -119,8 +120,9 @@ export function OfferGeneralTab({ offer, advertisers, onSaved }: Props) {
     setSaveError(null);
     try {
       const trafficRulesText = form.traffic_rules.trim();
-      const affiliatePayout = Number(form.affiliate_payout) || 0;
-      const advertiserPayout = Number(form.advertiser_payout) || 0;
+      const isRevShare = form.payout_type === "REVENUE_SHARE";
+      const affiliatePayout = isRevShare ? 0 : (Number(form.affiliate_payout) || 0);
+      const advertiserPayout = isRevShare ? 0 : (Number(form.advertiser_payout) || 0);
       const payload: offersApi.OfferFormPayload = {
         name: form.name.trim(),
         category: form.category.trim() || "General",
@@ -128,6 +130,9 @@ export function OfferGeneralTab({ offer, advertisers, onSaved }: Props) {
         payout_amount: affiliatePayout,
         advertiser_payout: advertiserPayout,
         affiliate_payout: affiliatePayout,
+        affiliate_revenue_share_percent: isRevShare
+          ? (Number(form.affiliate_revenue_share_percent) || null)
+          : null,
         currency: form.currency.trim() || "USD",
         landing_page_url: form.landing_page_url.trim(),
         preview_url: form.preview_url.trim() || undefined,
@@ -254,6 +259,7 @@ export function OfferGeneralTab({ offer, advertisers, onSaved }: Props) {
               <option value="CPI">CPI – Cost Per Install</option>
               <option value="CPC">CPC – Cost Per Click</option>
               <option value="FLAT">Flat Rate</option>
+              <option value="REVENUE_SHARE">Revenue Share</option>
             </select>
           </div>
 
@@ -262,20 +268,53 @@ export function OfferGeneralTab({ offer, advertisers, onSaved }: Props) {
             <input name="currency" value={form.currency} onChange={handleChange} className={inputCls} placeholder="USD" />
           </div>
 
-          <div>
-            <label className={labelCls}>Advertiser Payout *</label>
-            <input name="advertiser_payout" type="number" min="0" step="0.01" value={form.advertiser_payout} onChange={handleChange} required className={inputCls} placeholder="0.00" />
-            <p className="mt-1 text-[11px] theme-text-muted">What the advertiser pays per conversion.</p>
-          </div>
+          {form.payout_type === "REVENUE_SHARE" ? (
+            <div className="sm:col-span-2">
+              <label className={labelCls}>Affiliate Revenue Share % *</label>
+              <input
+                name="affiliate_revenue_share_percent"
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={form.affiliate_revenue_share_percent}
+                onChange={handleChange}
+                required
+                className={inputCls}
+                placeholder="e.g. 30"
+              />
+              <p className="mt-1 text-[11px] theme-text-muted">
+                Affiliate earns this % of the revenue the advertiser reports per conversion.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div>
+                <label className={labelCls}>Advertiser Payout *</label>
+                <input name="advertiser_payout" type="number" min="0" step="0.01" value={form.advertiser_payout} onChange={handleChange} required className={inputCls} placeholder="0.00" />
+                <p className="mt-1 text-[11px] theme-text-muted">What the advertiser pays per conversion.</p>
+              </div>
 
-          <div>
-            <label className={labelCls}>Affiliate Payout *</label>
-            <input name="affiliate_payout" type="number" min="0" step="0.01" value={form.affiliate_payout} onChange={handleChange} required className={inputCls} placeholder="0.00" />
-            <p className="mt-1 text-[11px] theme-text-muted">What the affiliate earns per conversion.</p>
-          </div>
+              <div>
+                <label className={labelCls}>Affiliate Payout *</label>
+                <input name="affiliate_payout" type="number" min="0" step="0.01" value={form.affiliate_payout} onChange={handleChange} required className={inputCls} placeholder="0.00" />
+                <p className="mt-1 text-[11px] theme-text-muted">What the affiliate earns per conversion.</p>
+              </div>
+            </>
+          )}
 
           {/* Profit preview */}
-          {(Number(form.advertiser_payout) > 0 || Number(form.affiliate_payout) > 0) && (
+          {form.payout_type === "REVENUE_SHARE" && Number(form.affiliate_revenue_share_percent) > 0 && (
+            <div className="sm:col-span-2">
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-900 border theme-border px-4 py-3 flex items-center gap-6 text-xs">
+                <span className="theme-text-muted">Payout Model: <strong className="text-cyan-600">Revenue Share</strong></span>
+                <span className="font-bold text-emerald-600">
+                  Affiliate earns {Number(form.affiliate_revenue_share_percent).toFixed(2)}% of advertiser revenue
+                </span>
+              </div>
+            </div>
+          )}
+          {form.payout_type !== "REVENUE_SHARE" && (Number(form.advertiser_payout) > 0 || Number(form.affiliate_payout) > 0) && (
             <div className="sm:col-span-2">
               <div className="rounded-xl bg-slate-50 dark:bg-slate-900 border theme-border px-4 py-3 flex items-center gap-6 text-xs">
                 <span className="theme-text-muted">Advertiser Payout: <strong className="theme-text-main">${Number(form.advertiser_payout).toFixed(2)}</strong></span>
