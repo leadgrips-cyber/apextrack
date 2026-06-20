@@ -4,6 +4,28 @@ import * as clickRepository from "../repositories/click.repository.js";
 import { evaluateTargeting } from "./targeting.service.js";
 import { checkClickCaps } from "./caps.service.js";
 
+const CLICK_MACRO_PATTERN = /\{(click_id|offer_id|publisher_id|sub1|sub2|sub3|sub4|sub5)\}/gi;
+
+function resolveClickMacros(
+  url: string,
+  clickId: string,
+  offerId: number,
+  publisherId: string,
+  subs: { sub1?: string | null; sub2?: string | null; sub3?: string | null; sub4?: string | null; sub5?: string | null }
+): string {
+  const vars: Record<string, string> = {
+    click_id:     clickId,
+    offer_id:     String(offerId),
+    publisher_id: publisherId,
+    sub1: subs.sub1 ?? '',
+    sub2: subs.sub2 ?? '',
+    sub3: subs.sub3 ?? '',
+    sub4: subs.sub4 ?? '',
+    sub5: subs.sub5 ?? '',
+  };
+  return url.replace(CLICK_MACRO_PATTERN, (_, token) => vars[token.toLowerCase()] ?? '');
+}
+
 function parseDeviceType(userAgent?: string): string | null {
   if (!userAgent) return null;
   const ua = userAgent.toLowerCase();
@@ -120,8 +142,16 @@ export async function createClickEvent(
   } as const;
 
   const savedClick = await clickRepository.saveClick(clickId, clickData as any);
-  return {
-    click: savedClick,
-    redirectUrl: offer.landing_page_url,
-  };
+
+  const redirectUrl = resolveClickMacros(
+    offer.landing_page_url,
+    clickId,
+    offer.id,
+    query.publisher_id,
+    { sub1: query.sub1, sub2: query.sub2, sub3: query.sub3, sub4: query.sub4, sub5: query.sub5 }
+  );
+
+  console.log(`[click] ${clickId} offer=${offer.id} publisher=${query.publisher_id} → ${redirectUrl}`);
+
+  return { click: savedClick, redirectUrl };
 }
