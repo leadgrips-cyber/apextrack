@@ -22,6 +22,7 @@ export interface PublisherAdminRecord {
   updated_at: string;
   approved_at?: string | null;
   rejected_reason?: string | null;
+  email_verified?: boolean;
   total_clicks: number;
   total_conversions: number;
   total_revenue: string;
@@ -118,6 +119,7 @@ export async function findPublishers(filters: PublisherListFilters) {
        p.updated_at,
        p.approved_at,
        p.rejected_reason,
+       p.email_verified,
        COALESCE(click_stats.total_clicks, 0) AS total_clicks,
        COALESCE(conv_stats.total_conversions, 0) AS total_conversions,
        COALESCE(conv_stats.total_revenue, 0) AS total_revenue,
@@ -172,6 +174,7 @@ export async function findPublisherById(publisherId: string): Promise<PublisherA
        p.updated_at,
        p.approved_at,
        p.rejected_reason,
+       p.email_verified,
        COALESCE(click_stats.total_clicks, 0) AS total_clicks,
        COALESCE(conv_stats.total_conversions, 0) AS total_conversions,
        COALESCE(conv_stats.total_revenue, 0) AS total_revenue,

@@ -24,6 +24,7 @@ export interface AffiliateRecord {
   manager: string;
   assignedManagerId: string | null;
   status: AffiliateStatus;
+  email_verified?: boolean;
   // Optional profile fields
   phone?: string;
   company?: string;
@@ -63,6 +64,7 @@ function mapPublisherToAffiliate(p: publishersApi.PublisherRecord): AffiliateRec
     manager: p.manager_name || "Unassigned",
     assignedManagerId: p.assigned_manager_id,
     status: mapAccountStatus(p.account_status),
+    email_verified: p.email_verified,
     company: p.company_name || undefined,
   };
 }
@@ -101,6 +103,10 @@ export function AffiliateListView({
   const [assignTarget, setAssignTarget] = useState<AffiliateRecord | null>(null);
   const [selectedManagerId, setSelectedManagerId] = useState<string>("");
   const [assignLoading, setAssignLoading] = useState(false);
+
+  // Resend verification state
+  const [resendingVerification, setResendingVerification] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const fetchAffiliates = useCallback(async () => {
     setLoading(true);
@@ -208,6 +214,19 @@ export function AffiliateListView({
     }
   };
 
+  const handleResendVerification = async (affiliate: AffiliateRecord) => {
+    setResendingVerification(affiliate.publisherId);
+    try {
+      await publishersApi.resendVerificationEmail(affiliate.publisherId);
+      setToast({ type: "success", message: "Verification email sent successfully" });
+    } catch (err: any) {
+      setToast({ type: "error", message: err.message || "Failed to resend verification email" });
+    } finally {
+      setResendingVerification(null);
+      setTimeout(() => setToast(null), 4000);
+    }
+  };
+
   const openAssignManager = (affiliate: AffiliateRecord) => {
     setAssignTarget(affiliate);
     setSelectedManagerId(affiliate.assignedManagerId || "");
@@ -262,6 +281,20 @@ export function AffiliateListView({
         <div className="flex items-center justify-between rounded-2xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700">
           <span>{actionError}</span>
           <button onClick={() => setActionError(null)}>
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Toast notification */}
+      {toast && (
+        <div className={`flex items-center justify-between rounded-2xl px-4 py-3 text-sm ${
+          toast.type === "success"
+            ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
+            : "bg-rose-50 border border-rose-200 text-rose-700"
+        }`}>
+          <span>{toast.message}</span>
+          <button onClick={() => setToast(null)}>
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -382,6 +415,15 @@ export function AffiliateListView({
                           >
                             Assign Manager
                           </button>
+                          {affiliate.email_verified === false && (
+                            <button
+                              onClick={() => handleResendVerification(affiliate)}
+                              disabled={resendingVerification === affiliate.publisherId}
+                              className="w-full px-4 py-3 text-left text-sm text-cyan-600 hover:bg-slate-50 transition disabled:opacity-50"
+                            >
+                              {resendingVerification === affiliate.publisherId ? "Sending..." : "Resend Verification"}
+                            </button>
+                          )}
                           {affiliate.status !== "Active" && (
                             <button
                               onClick={() => handleActivate(affiliate)}

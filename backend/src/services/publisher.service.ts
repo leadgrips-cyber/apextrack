@@ -73,6 +73,7 @@ function sanitizePublisherRow(
     updated_at: row.updated_at,
     approved_at: row.approved_at,
     rejected_reason: row.rejected_reason,
+    email_verified: row.email_verified ?? false,
     total_clicks: Number(row.total_clicks),
     total_conversions: Number(row.total_conversions),
     total_revenue: Number(row.total_revenue),

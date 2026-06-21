@@ -3,6 +3,7 @@ import { authenticateJwt } from "../middlewares/auth.middleware.js";
 import { authorizeRoles } from "../middlewares/rbac.middleware.js";
 import {
   handleAdminCreatePublisher,
+  handleAdminResendVerification,
   handleApprovePublisher,
   handleAssignManager,
   handleBlockPublisher,
@@ -41,5 +42,6 @@ router.get('/:id/wallet', handleGetPublisherWallet);
 router.patch('/:id/profile', handleUpdatePublisherProfile);
 router.get('/:id/applications', handleListPublisherApplications);
 router.get('/:id/tracking-links', handleListPublisherTrackingLinks);
+router.post('/:id/resend-verification', handleAdminResendVerification);
 
 export default router;

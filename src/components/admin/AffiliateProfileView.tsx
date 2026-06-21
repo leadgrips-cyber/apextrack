@@ -7,6 +7,7 @@ import {
   Loader2,
   Save,
   KeyRound,
+  Mail,
 } from "lucide-react";
 import * as publishersApi from "../../services/publishers";
 
@@ -127,6 +128,9 @@ export function AffiliateProfileView({ affiliate: initialAffiliate, onBack }: Af
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
+  const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
+  const [resendingVerification, setResendingVerification] = useState(false);
+
   useEffect(() => {
     setProfileLoading(true);
     setProfileError(null);
@@ -140,6 +144,7 @@ export function AffiliateProfileView({ affiliate: initialAffiliate, onBack }: Af
         setCurrentStatus(mapAccountStatus(pub.account_status));
         setCurrentManager(pub.manager_name || "Unassigned");
         setSelectedManagerId(pub.assigned_manager_id || "");
+        setEmailVerified(pub.email_verified ?? null);
         setForm({
           full_name: pub.full_name || "",
           email: pub.email || "",
@@ -231,6 +236,20 @@ export function AffiliateProfileView({ affiliate: initialAffiliate, onBack }: Af
       setSaveManagerError(err.message || "Failed to assign manager");
     } finally {
       setSaveManagerLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setResendingVerification(true);
+    setActionError(null);
+    setActionSuccess(null);
+    try {
+      await publishersApi.resendVerificationEmail(initialAffiliate.publisherId);
+      setActionSuccess("Verification email sent successfully.");
+    } catch (err: any) {
+      setActionError(err.message || "Failed to resend verification email");
+    } finally {
+      setResendingVerification(false);
     }
   };
 
@@ -574,6 +593,16 @@ export function AffiliateProfileView({ affiliate: initialAffiliate, onBack }: Af
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
               Suspend
             </button>
+            {emailVerified === false && (
+              <button
+                onClick={handleResendVerification}
+                disabled={resendingVerification}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-700 hover:bg-cyan-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                {resendingVerification ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                Resend Verification
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -17,6 +17,7 @@ import {
   updatePublisherProfile,
 } from "../services/publisher.service.js";
 import { bulkAssignPublishers } from "../repositories/publisher.repository.js";
+import { sendVerificationEmail } from "../services/verification.service.js";
 
 function parsePositiveNumber(value: unknown, fallback: number) {
   const numeric = Number(value);
@@ -278,6 +279,22 @@ export async function handleBulkAssign(req: AuthRequest, res: Response, next: Ne
     const resolvedManagerId = typeof manager_id === 'string' && manager_id.trim() ? manager_id.trim() : null;
     const count = await bulkAssignPublishers(publisher_ids as string[], resolvedManagerId);
     res.json({ updated: count });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function handleAdminResendVerification(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const publisherId = req.params.id;
+    const publisher = await getPublisherDetails(publisherId);
+    if (!publisher.email) {
+      res.status(400).json({ success: false, message: 'Publisher has no email address' });
+      return;
+    }
+    const firstName = (publisher.full_name ?? '').split(' ')[0] ?? '';
+    await sendVerificationEmail('publisher', publisherId, publisher.email, firstName);
+    res.json({ success: true, message: 'Verification email resent successfully' });
   } catch (error) {
     next(error);
   }

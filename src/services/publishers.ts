@@ -22,6 +22,7 @@ export interface PublisherRecord {
   assigned_manager_id: string | null;
   manager_name: string | null;
   is_active: boolean;
+  email_verified?: boolean;
   created_at: string;
   total_clicks: number;
   total_conversions: number;
@@ -215,4 +216,15 @@ export async function approveAffiliate(publisherId: string): Promise<PublisherRe
   }
   const data = await response.json();
   return data.publisher as PublisherRecord;
+}
+
+export async function resendVerificationEmail(publisherId: string): Promise<void> {
+  const response = await fetch(`${API_URL}/publishers/${publisherId}/resend-verification`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error((data as any).message || "Failed to resend verification email");
+  }
 }
