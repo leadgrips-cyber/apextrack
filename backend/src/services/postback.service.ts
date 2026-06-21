@@ -122,18 +122,27 @@ export async function handlePostback(payload: PostbackRequestPayload, rawPayload
 
   // ── Legacy flow (no event param) ────────────────────────────────────────────
   const advertiserStatus = validateStatus(payload.status);
-  const revenueAmount = parseNumericValue(payload.revenue, 'revenue');
   const transactionId = payload.transaction_id;
+  if (!transactionId) throw new Error('transaction_id is required');
 
   const legacyOfferFinancials = await postbackRepository.findOfferPayoutAmount(click.offer_id);
   let payoutAmount: number;
+  let revenueAmount: number;
+
   if (legacyOfferFinancials?.payout_type === 'REVENUE_SHARE') {
+    // Revenue Share: payout = advertiser revenue × share% (unchanged)
+    revenueAmount = parseNumericValue(payload.revenue, 'revenue');
     const sharePercent = Number(legacyOfferFinancials.affiliate_revenue_share_percent ?? 0);
     payoutAmount = revenueAmount * (sharePercent / 100);
+  } else if (legacyOfferFinancials?.payout_type === 'CPA') {
+    // CPA: use offer's configured amounts, ignore advertiser-supplied payout
+    payoutAmount = Number(legacyOfferFinancials.affiliate_payout ?? 0);
+    revenueAmount = Number(legacyOfferFinancials.advertiser_payout ?? 0);
   } else {
+    // All other types: pass-through advertiser-supplied values
+    revenueAmount = parseNumericValue(payload.revenue, 'revenue');
     payoutAmount = parseNumericValue(payload.payout, 'payout');
   }
-  if (!transactionId) throw new Error('transaction_id is required');
 
   const alreadyExists = await postbackRepository.conversionExists(payload.click_id);
   if (alreadyExists) throw new Error('Conversion already exists for this click');

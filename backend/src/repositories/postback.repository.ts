@@ -54,9 +54,9 @@ export async function findActiveEventByToken(offerId: number, eventToken: string
   return result.rows[0] ?? null;
 }
 
-export async function findOfferPayoutAmount(offerId: number): Promise<{ payout_amount: string; payout_type: string; affiliate_revenue_share_percent: string | null } | null> {
-  const result = await query<{ payout_amount: string; payout_type: string; affiliate_revenue_share_percent: string | null }>(
-    'SELECT payout_amount, payout_type, affiliate_revenue_share_percent FROM offers WHERE id = $1 LIMIT 1',
+export async function findOfferPayoutAmount(offerId: number): Promise<{ payout_amount: string; payout_type: string; affiliate_revenue_share_percent: string | null; advertiser_payout: string; affiliate_payout: string } | null> {
+  const result = await query<{ payout_amount: string; payout_type: string; affiliate_revenue_share_percent: string | null; advertiser_payout: string; affiliate_payout: string }>(
+    'SELECT payout_amount, payout_type, affiliate_revenue_share_percent, advertiser_payout, affiliate_payout FROM offers WHERE id = $1 LIMIT 1',
     [offerId]
   );
   return result.rows[0] ?? null;
