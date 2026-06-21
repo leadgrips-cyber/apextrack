@@ -93,7 +93,7 @@ export function AffiliateListView({
   const [countryFilter, setCountryFilter] = useState<string>("");
   const [managerFilter, setManagerFilter] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 5;
+  const [pageSize, setPageSize] = useState(10);
 
   // Per-row action loading: stores publisherId of the affiliate being acted on
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -256,21 +256,21 @@ export function AffiliateListView({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
-          <div className="text-xs uppercase tracking-[0.24em] font-bold theme-text-muted">Affiliates</div>
-          <h2 className="mt-2 text-2xl font-black theme-text-main">{title}</h2>
-          <p className="mt-2 text-sm theme-text-muted max-w-2xl">{subtitle}</p>
+          <div className="text-[10px] uppercase tracking-[0.2em] font-bold theme-text-muted">Affiliates</div>
+          <h2 className="mt-1 text-xl font-black theme-text-main">{title}</h2>
+          <p className="mt-0.5 text-xs theme-text-muted max-w-2xl">{subtitle}</p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <button onClick={() => { console.log("CREATE_AFFILIATE_CLICKED"); onCreateAffiliate?.(); }} className="inline-flex items-center gap-2 rounded-full bg-cyan-600 px-4 py-2 text-xs font-semibold text-white hover:bg-cyan-500 transition">
-            <Plus className="w-4 h-4" />
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => { console.log("CREATE_AFFILIATE_CLICKED"); onCreateAffiliate?.(); }} className="inline-flex items-center gap-1.5 rounded-full bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-500 transition">
+            <Plus className="w-3.5 h-3.5" />
             Create Affiliate
           </button>
-          <button className="inline-flex items-center gap-2 rounded-full border theme-border bg-white px-4 py-2 text-xs font-semibold theme-text-secondary hover:bg-slate-100 transition">
-            <Download className="w-4 h-4" />
+          <button className="inline-flex items-center gap-1.5 rounded-full border theme-border bg-white px-3 py-1.5 text-xs font-semibold theme-text-secondary hover:bg-slate-100 transition">
+            <Download className="w-3.5 h-3.5" />
             Export
           </button>
         </div>
@@ -301,27 +301,27 @@ export function AffiliateListView({
       )}
 
       {/* Filters */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <label className="space-y-2">
-          <span className="text-[10px] uppercase tracking-[0.24em] font-bold theme-text-muted">Search Affiliate</span>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <label className="space-y-1">
+          <span className="text-[9px] uppercase tracking-[0.2em] font-bold theme-text-muted">Search Affiliate</span>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 theme-text-muted" />
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 theme-text-muted" />
             <input
               type="search"
               value={search}
               onChange={handleFilterChange(setSearch)}
               placeholder="Search name, email, or ID"
-              className="w-full rounded-2xl border theme-border bg-white px-10 py-3 text-sm theme-text-main focus:outline-none"
+              className="w-full rounded-xl border theme-border bg-white px-8 py-2 text-xs theme-text-main focus:outline-none"
             />
           </div>
         </label>
 
-        <label className="space-y-2">
-          <span className="text-[10px] uppercase tracking-[0.24em] font-bold theme-text-muted">Status Filter</span>
+        <label className="space-y-1">
+          <span className="text-[9px] uppercase tracking-[0.2em] font-bold theme-text-muted">Status</span>
           <select
             value={statusFilter}
             onChange={handleFilterChange(setStatusFilter)}
-            className="w-full rounded-2xl border theme-border bg-white px-4 py-3 text-sm theme-text-main"
+            className="w-full rounded-xl border theme-border bg-white px-3 py-2 text-xs theme-text-main"
           >
             <option value="">All statuses</option>
             <option value="Pending">Pending</option>
@@ -330,12 +330,12 @@ export function AffiliateListView({
           </select>
         </label>
 
-        <label className="space-y-2">
-          <span className="text-[10px] uppercase tracking-[0.24em] font-bold theme-text-muted">Country Filter</span>
+        <label className="space-y-1">
+          <span className="text-[9px] uppercase tracking-[0.2em] font-bold theme-text-muted">Country</span>
           <select
             value={countryFilter}
             onChange={handleFilterChange(setCountryFilter)}
-            className="w-full rounded-2xl border theme-border bg-white px-4 py-3 text-sm theme-text-main"
+            className="w-full rounded-xl border theme-border bg-white px-3 py-2 text-xs theme-text-main"
           >
             <option value="">All countries</option>
             {countries.map((c) => (
@@ -344,12 +344,12 @@ export function AffiliateListView({
           </select>
         </label>
 
-        <label className="space-y-2">
-          <span className="text-[10px] uppercase tracking-[0.24em] font-bold theme-text-muted">Manager Filter</span>
+        <label className="space-y-1">
+          <span className="text-[9px] uppercase tracking-[0.2em] font-bold theme-text-muted">Manager</span>
           <select
             value={managerFilter}
             onChange={handleFilterChange(setManagerFilter)}
-            className="w-full rounded-2xl border theme-border bg-white px-4 py-3 text-sm theme-text-main"
+            className="w-full rounded-xl border theme-border bg-white px-3 py-2 text-xs theme-text-main"
           >
             <option value="">All managers</option>
             {managerNames.map((m) => (
@@ -369,14 +369,14 @@ export function AffiliateListView({
           <table className="min-w-full divide-y divide-slate-200 text-left">
             <thead className="bg-slate-50">
               <tr>
-                <th className="px-5 py-4 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Registration Date</th>
-                <th className="px-5 py-4 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Affiliate ID</th>
-                <th className="px-5 py-4 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Full Name</th>
-                <th className="px-5 py-4 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Email</th>
-                <th className="px-5 py-4 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Country</th>
-                <th className="px-5 py-4 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Manager</th>
-                <th className="px-5 py-4 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Status</th>
-                <th className="px-5 py-4 text-right text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">Actions</th>
+                <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Reg. Date</th>
+                <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Affiliate ID</th>
+                <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Full Name</th>
+                <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Email</th>
+                <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Country</th>
+                <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Manager</th>
+                <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Status</th>
+                <th className="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
@@ -384,34 +384,34 @@ export function AffiliateListView({
                 const isActing = actionLoading === affiliate.publisherId;
                 return (
                   <tr key={affiliate.publisherId} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-5 py-4 text-sm theme-text-secondary">{affiliate.registrationDate}</td>
-                    <td className="px-5 py-4 text-sm font-semibold theme-text-main">{affiliate.id}</td>
-                    <td className="px-5 py-4 text-sm theme-text-main">{affiliate.fullName}</td>
-                    <td className="px-5 py-4 text-sm theme-text-secondary">{affiliate.email}</td>
-                    <td className="px-5 py-4 text-sm theme-text-secondary">{affiliate.country}</td>
-                    <td className="px-5 py-4 text-sm theme-text-secondary">{affiliate.manager}</td>
-                    <td className="px-5 py-4">
-                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold ${statusClasses[affiliate.status]}`}>
+                    <td className="px-4 py-3 text-xs theme-text-secondary">{affiliate.registrationDate}</td>
+                    <td className="px-4 py-3 text-xs font-semibold theme-text-main">{affiliate.id}</td>
+                    <td className="px-4 py-3 text-xs theme-text-main">{affiliate.fullName}</td>
+                    <td className="px-4 py-3 text-xs theme-text-secondary">{affiliate.email}</td>
+                    <td className="px-4 py-3 text-xs theme-text-secondary">{affiliate.country}</td>
+                    <td className="px-4 py-3 text-xs theme-text-secondary">{affiliate.manager}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusClasses[affiliate.status]}`}>
                         {affiliate.status}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-right align-top">
+                    <td className="px-4 py-3 text-right align-top">
                       <details className="relative inline-block text-left">
-                        <summary className="inline-flex cursor-pointer items-center gap-2 rounded-full border theme-border bg-slate-50 px-4 py-2 text-xs font-semibold theme-text-secondary hover:bg-slate-100 transition">
+                        <summary className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border theme-border bg-slate-50 px-3 py-1.5 text-xs font-semibold theme-text-secondary hover:bg-slate-100 transition">
                           {isActing ? "Working..." : "Actions"}
-                          <ChevronDown className="h-4 w-4" />
+                          <ChevronDown className="h-3.5 w-3.5" />
                         </summary>
                         <div className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-3xl border theme-border bg-white text-left shadow-xl">
                           <button
                             onClick={() => onViewProfile?.(affiliate)}
-                            className="w-full px-4 py-3 text-left text-sm theme-text-main hover:bg-slate-50 transition"
+                            className="w-full px-4 py-2.5 text-left text-sm theme-text-main hover:bg-slate-50 transition"
                           >
                             View Profile
                           </button>
                           <button
                             onClick={() => openAssignManager(affiliate)}
                             disabled={isActing}
-                            className="w-full px-4 py-3 text-left text-sm theme-text-main hover:bg-slate-50 transition disabled:opacity-50"
+                            className="w-full px-4 py-2.5 text-left text-sm theme-text-main hover:bg-slate-50 transition disabled:opacity-50"
                           >
                             Assign Manager
                           </button>
@@ -419,7 +419,7 @@ export function AffiliateListView({
                             <button
                               onClick={() => handleResendVerification(affiliate)}
                               disabled={resendingVerification === affiliate.publisherId}
-                              className="w-full px-4 py-3 text-left text-sm text-cyan-600 hover:bg-slate-50 transition disabled:opacity-50"
+                              className="w-full px-4 py-2.5 text-left text-sm text-cyan-600 hover:bg-slate-50 transition disabled:opacity-50"
                             >
                               {resendingVerification === affiliate.publisherId ? "Sending..." : "Resend Verification"}
                             </button>
@@ -428,7 +428,7 @@ export function AffiliateListView({
                             <button
                               onClick={() => handleActivate(affiliate)}
                               disabled={isActing}
-                              className="w-full px-4 py-3 text-left text-sm text-emerald-600 hover:bg-slate-50 transition disabled:opacity-50"
+                              className="w-full px-4 py-2.5 text-left text-sm text-emerald-600 hover:bg-slate-50 transition disabled:opacity-50"
                             >
                               Activate Account
                             </button>
@@ -437,7 +437,7 @@ export function AffiliateListView({
                             <button
                               onClick={() => handleDisable(affiliate)}
                               disabled={isActing}
-                              className="w-full px-4 py-3 text-left text-sm text-rose-600 hover:bg-slate-50 transition disabled:opacity-50"
+                              className="w-full px-4 py-2.5 text-left text-sm text-rose-600 hover:bg-slate-50 transition disabled:opacity-50"
                             >
                               Disable Account
                             </button>
@@ -450,7 +450,7 @@ export function AffiliateListView({
               })}
               {paged.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-5 py-10 text-center text-sm theme-text-muted">
+                  <td colSpan={8} className="px-4 py-8 text-center text-sm theme-text-muted">
                     No affiliates match your filters.
                   </td>
                 </tr>
@@ -462,25 +462,39 @@ export function AffiliateListView({
 
       {/* Pagination */}
       {!loading && !error && (
-        <div className="flex flex-col gap-4 justify-between sm:flex-row sm:items-center">
-          <div className="text-sm theme-text-muted">
-            Showing {paged.length === 0 ? 0 : (currentPageSafe - 1) * pageSize + 1}–{Math.min(currentPageSafe * pageSize, filtered.length)} of {filtered.length} affiliates
+        <div className="flex flex-col gap-3 justify-between sm:flex-row sm:items-center">
+          <div className="flex items-center gap-3">
+            <span className="text-xs theme-text-muted">
+              Showing {paged.length === 0 ? 0 : (currentPageSafe - 1) * pageSize + 1}–{Math.min(currentPageSafe * pageSize, filtered.length)} of {filtered.length} affiliates
+            </span>
+            <label className="flex items-center gap-1.5 text-xs theme-text-muted">
+              <span>Rows:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                className="rounded-lg border theme-border bg-white px-2 py-1 text-xs theme-text-main focus:outline-none"
+              >
+                {[5, 10, 15, 20, 50].map(n => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </label>
           </div>
-          <div className="inline-flex items-center gap-2 rounded-full border theme-border bg-white px-2 py-1">
+          <div className="inline-flex items-center gap-1.5 rounded-full border theme-border bg-white px-2 py-1">
             <button
               type="button"
               disabled={currentPageSafe === 1}
               onClick={() => setCurrentPage(Math.max(1, currentPageSafe - 1))}
-              className="inline-flex items-center justify-center rounded-full px-3 py-2 text-sm font-semibold theme-text-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center rounded-full px-2.5 py-1.5 text-sm font-semibold theme-text-secondary disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-3.5 h-3.5" />
             </button>
             {pageRange.map((page) => (
               <button
                 key={page}
                 type="button"
                 onClick={() => setCurrentPage(page)}
-                className={`min-w-[34px] rounded-full px-3 py-2 text-sm font-semibold transition ${
+                className={`min-w-[30px] rounded-full px-2.5 py-1.5 text-xs font-semibold transition ${
                   page === currentPageSafe ? "bg-cyan-600 text-white" : "theme-text-secondary hover:bg-slate-100"
                 }`}
               >
@@ -491,9 +505,9 @@ export function AffiliateListView({
               type="button"
               disabled={currentPageSafe === totalPages}
               onClick={() => setCurrentPage(Math.min(totalPages, currentPageSafe + 1))}
-              className="inline-flex items-center justify-center rounded-full px-3 py-2 text-sm font-semibold theme-text-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center rounded-full px-2.5 py-1.5 text-sm font-semibold theme-text-secondary disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>

@@ -124,8 +124,8 @@ export function ReportsView() {
   }, [activeTab, loadDaily, loadOverview, loadClicks, loadConversions]);
 
   const dailyTotals = dailyRows.reduce(
-    (acc, r) => ({ clicks: acc.clicks + r.clicks, conversions: acc.conversions + r.conversions, payout: acc.payout + Number(r.payout), revenue: acc.revenue + Number(r.revenue) }),
-    { clicks: 0, conversions: 0, payout: 0, revenue: 0 }
+    (acc, r) => ({ clicks: acc.clicks + r.clicks, conversions: acc.conversions + r.conversions, payout: acc.payout + Number(r.payout) }),
+    { clicks: 0, conversions: 0, payout: 0 }
   );
 
   const handleExportCSV = async () => {
@@ -133,18 +133,18 @@ export function ReportsView() {
       let rows: Record<string, unknown>[] = [];
       let filename = "";
       if (activeTab === "daily") {
-        rows = dailyRows.map(r => ({ date: r.date, clicks: r.clicks, conversions: r.conversions, payout: r.payout, revenue: r.revenue, profit: r.profit }));
+        rows = dailyRows.map(r => ({ date: r.date, clicks: r.clicks, conversions: r.conversions, payout: r.payout }));
         filename = `publisher-daily-${startDate}-${endDate}.csv`;
       } else if (activeTab === "overview") {
-        rows = overviewRows.map(r => ({ offer: r.offer_name, clicks: r.clicks, conversions: r.conversions, payout: r.payout, revenue: r.revenue }));
+        rows = overviewRows.map(r => ({ offer: r.offer_name, clicks: r.clicks, conversions: r.conversions, payout: r.payout }));
         filename = `publisher-overview-${today()}.csv`;
       } else if (activeTab === "clicks") {
         const all = await publisherApi.getPublisherClickReport({ startDate, endDate, search: search || undefined, page: 1, pageSize: 10000 });
-        rows = all.rows.map(r => ({ click_id: r.click_id, offer: r.offer_name, country: r.country_code, device: r.device_type, sub1: r.sub1, sub2: r.sub2, sub3: r.sub3, sub4: r.sub4, sub5: r.sub5, time: r.created_at }));
+        rows = all.rows.map(r => ({ offer: r.offer_name, country: r.country_code, device: r.device_type, sub1: r.sub1, sub2: r.sub2, sub3: r.sub3, sub4: r.sub4, sub5: r.sub5, time: r.created_at }));
         filename = `publisher-clicks-${today()}.csv`;
       } else {
         const all = await publisherApi.getPublisherConversionReport({ startDate, endDate, search: search || undefined, page: 1, pageSize: 10000 });
-        rows = all.rows.map(r => ({ conversion_id: r.id, click_id: r.click_id, offer: r.offer_name, status: r.conversion_status, payout: r.payout_amount, time: r.event_timestamp }));
+        rows = all.rows.map(r => ({ conversion_id: r.id, offer: r.offer_name, status: r.conversion_status, payout: r.payout_amount, time: r.event_timestamp }));
         filename = `publisher-conversions-${today()}.csv`;
       }
       publisherApi.downloadPublisherCSV(rows, filename);
@@ -325,7 +325,7 @@ export function ReportsView() {
                 <table className="min-w-full divide-y divide-slate-800 text-left">
                   <thead className="bg-slate-950 text-[10px] tracking-wider font-mono uppercase text-slate-400">
                     <tr>
-                      {["Date","Clicks","Conversions","Payout","Revenue","Profit"].map(h => (
+                      {["Date","Clicks","Conversions","Payout"].map(h => (
                         <th key={h} className="px-5 py-3 whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -336,8 +336,6 @@ export function ReportsView() {
                       <td className="px-5 py-3.5 text-sky-400">{dailyTotals.clicks.toLocaleString()}</td>
                       <td className="px-5 py-3.5 text-amber-500">{dailyTotals.conversions.toLocaleString()}</td>
                       <td className="px-5 py-3.5 text-emerald-400">${dailyTotals.payout.toFixed(2)}</td>
-                      <td className="px-5 py-3.5 text-indigo-300">${dailyTotals.revenue.toFixed(2)}</td>
-                      <td className="px-5 py-3.5 text-slate-300">${(dailyTotals.revenue - dailyTotals.payout).toFixed(2)}</td>
                     </tr>
                   </tbody>
                   <tbody className="divide-y divide-slate-800 text-[11px] text-slate-400 font-mono bg-slate-900/40">
@@ -349,12 +347,10 @@ export function ReportsView() {
                         <td className="px-5 py-3.5 text-sky-400">{d.clicks.toLocaleString()}</td>
                         <td className="px-5 py-3.5 text-amber-500">{d.conversions.toLocaleString()}</td>
                         <td className="px-5 py-3.5 text-emerald-400 font-bold">${Number(d.payout).toFixed(2)}</td>
-                        <td className="px-5 py-3.5 text-indigo-300">${Number(d.revenue).toFixed(2)}</td>
-                        <td className="px-5 py-3.5 text-slate-300">${Number(d.profit).toFixed(2)}</td>
                       </tr>
                     ))}
                     {dailyRows.length === 0 && (
-                      <tr><td colSpan={6} className="text-center py-10 text-slate-500 text-xs uppercase font-semibold">No records found for the selected date range.</td></tr>
+                      <tr><td colSpan={4} className="text-center py-10 text-slate-500 text-xs uppercase font-semibold">No records found for the selected date range.</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -367,7 +363,7 @@ export function ReportsView() {
                 <table className="min-w-full divide-y divide-slate-800 text-left">
                   <thead className="bg-slate-950 text-[10px] tracking-wider font-mono uppercase text-slate-400">
                     <tr>
-                      {["Offer","Clicks","Conversions","Payout","Revenue"].map(h => (
+                      {["Offer","Clicks","Conversions","Payout"].map(h => (
                         <th key={h} className="px-5 py-3 whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -379,11 +375,10 @@ export function ReportsView() {
                         <td className="px-5 py-3.5 text-sky-400">{r.clicks.toLocaleString()}</td>
                         <td className="px-5 py-3.5 text-amber-500">{r.conversions.toLocaleString()}</td>
                         <td className="px-5 py-3.5 text-emerald-400 font-bold">${Number(r.payout).toFixed(2)}</td>
-                        <td className="px-5 py-3.5 text-indigo-300">${Number(r.revenue).toFixed(2)}</td>
                       </tr>
                     ))}
                     {overviewRows.length === 0 && (
-                      <tr><td colSpan={5} className="text-center py-10 text-slate-500 text-xs uppercase font-semibold">No offers recorded in the selected date range.</td></tr>
+                      <tr><td colSpan={4} className="text-center py-10 text-slate-500 text-xs uppercase font-semibold">No offers recorded in the selected date range.</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -397,7 +392,7 @@ export function ReportsView() {
                   <table className="min-w-full divide-y divide-slate-800 text-left">
                     <thead className="bg-slate-950 text-[10px] tracking-wider font-mono uppercase text-slate-400">
                       <tr>
-                        {["Time","Offer","Country","Device","Click ID","Aff S1","Aff S2","Aff S3","Aff S4","Aff S5"].map(h => (
+                        {["Time","Offer","Country","Device","Aff S1","Aff S2","Aff S3","Aff S4","Aff S5"].map(h => (
                           <th key={h} className="px-5 py-3 whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
@@ -409,7 +404,6 @@ export function ReportsView() {
                           <td className="px-5 py-3 text-slate-300 truncate max-w-[160px]" title={r.offer_name}>{r.offer_name}</td>
                           <td className="px-5 py-3 font-bold uppercase tracking-wide">{r.country_code || '—'}</td>
                           <td className="px-5 py-3 text-indigo-300">{r.device_type || '—'}</td>
-                          <td className="px-5 py-3 text-cyan-400 select-all">{r.click_id}</td>
                           <td className="px-5 py-3 truncate max-w-[90px]" title={r.sub1 || ''}>{r.sub1 || '—'}</td>
                           <td className="px-5 py-3 truncate max-w-[90px]" title={r.sub2 || ''}>{r.sub2 || '—'}</td>
                           <td className="px-5 py-3 truncate max-w-[90px]" title={r.sub3 || ''}>{r.sub3 || '—'}</td>
@@ -418,7 +412,7 @@ export function ReportsView() {
                         </tr>
                       ))}
                       {clickRows.length === 0 && (
-                        <tr><td colSpan={10} className="text-center py-10 text-slate-500 text-xs uppercase font-semibold">No matching redirects registered.</td></tr>
+                        <tr><td colSpan={9} className="text-center py-10 text-slate-500 text-xs uppercase font-semibold">No matching redirects registered.</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -449,7 +443,7 @@ export function ReportsView() {
                   <table className="min-w-full divide-y divide-slate-800 text-left">
                     <thead className="bg-slate-950 text-[10px] tracking-wider font-mono uppercase text-slate-400">
                       <tr>
-                        {["Time","Offer","Status","Payout","Revenue","Click ID"].map(h => (
+                        {["Time","Offer","Status","Payout"].map(h => (
                           <th key={h} className="px-5 py-3 whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
@@ -461,12 +455,10 @@ export function ReportsView() {
                           <td className="px-5 py-3 text-slate-300 truncate max-w-[160px]" title={r.offer_name}>{r.offer_name}</td>
                           <td className="px-5 py-3">{statusBadge(r.conversion_status)}</td>
                           <td className="px-5 py-3 text-emerald-400 font-bold">${Number(r.payout_amount).toFixed(2)}</td>
-                          <td className="px-5 py-3 text-indigo-300">${Number(r.revenue_amount).toFixed(2)}</td>
-                          <td className="px-5 py-3 text-cyan-400 font-mono text-[10px] select-all">{r.click_id ? r.click_id.slice(0, 12) + '…' : '—'}</td>
                         </tr>
                       ))}
                       {convRows.length === 0 && (
-                        <tr><td colSpan={6} className="text-center py-10 text-slate-500 text-xs uppercase font-semibold">No validated conversions in the selected date range.</td></tr>
+                        <tr><td colSpan={4} className="text-center py-10 text-slate-500 text-xs uppercase font-semibold">No validated conversions in the selected date range.</td></tr>
                       )}
                     </tbody>
                   </table>

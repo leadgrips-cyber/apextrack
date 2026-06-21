@@ -393,6 +393,10 @@ export interface ClickReportRow {
   affiliate_email: string;
   country_code: string | null;
   device_type: string | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  referrer: string | null;
+  landing_page_url: string | null;
   sub1: string | null;
   sub2: string | null;
   sub3: string | null;
@@ -439,6 +443,10 @@ export async function getClickReport(params: {
          p.email AS affiliate_email,
          cl.country_code,
          cl.device_type,
+         cl.click_ip::TEXT AS ip_address,
+         cl.user_agent,
+         cl.referrer,
+         cl.landing_page_url,
          cl.sub1, cl.sub2, cl.sub3, cl.sub4, cl.sub5,
          cl.created_at
        FROM clicks cl
@@ -476,6 +484,9 @@ export interface ConversionReportRow {
   validated_at: string | null;
   rejected_at: string | null;
   rejection_reason: string | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  source: string | null;
 }
 
 export async function getConversionReport(params: {
@@ -525,11 +536,15 @@ export async function getConversionReport(params: {
          c.event_timestamp,
          c.validated_at,
          c.rejected_at,
-         c.rejection_reason
+         c.rejection_reason,
+         cl.click_ip::TEXT AS ip_address,
+         cl.user_agent,
+         cl.referrer AS source
        FROM conversions c
        JOIN offers o ON c.offer_id = o.id
        LEFT JOIN advertisers a ON o.advertiser_id = a.id
        JOIN publishers p ON c.publisher_id = p.id
+       LEFT JOIN clicks cl ON c.click_id = cl.click_id
        ${where}
        ORDER BY c.created_at DESC
        LIMIT $${limitIdx} OFFSET $${offsetIdx}`,

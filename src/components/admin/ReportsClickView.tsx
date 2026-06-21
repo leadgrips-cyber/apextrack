@@ -99,18 +99,22 @@ export function ReportsClickView() {
       });
       analyticsApi.downloadCSV(
         result.rows.map(r => ({
-          click_id: r.click_id,
+          click_time: r.created_at,
           offer: r.offer_name,
-          affiliate: r.affiliate_name,
-          affiliate_email: r.affiliate_email,
           country: r.country_code ?? "",
           device: r.device_type ?? "",
+          ip_address: r.ip_address ?? "",
+          user_agent: r.user_agent ?? "",
+          referrer: r.referrer ?? "",
+          landing_page: r.landing_page_url ?? "",
+          click_id: r.click_id,
+          affiliate: r.affiliate_name,
+          affiliate_email: r.affiliate_email,
           sub1: r.sub1 ?? "",
           sub2: r.sub2 ?? "",
           sub3: r.sub3 ?? "",
           sub4: r.sub4 ?? "",
           sub5: r.sub5 ?? "",
-          click_time: r.created_at,
         })),
         `click-report-${new Date().toISOString().slice(0, 10)}.csv`
       );
@@ -242,10 +246,10 @@ export function ReportsClickView() {
           <div className="p-8 text-center text-sm theme-text-muted">No clicks found matching the current filters.</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[1100px]">
+            <table className="w-full text-sm min-w-[1600px]">
               <thead>
                 <tr className="border-b theme-border bg-slate-50 dark:bg-slate-900">
-                  {["Click ID", "Offer", "Affiliate", "Country", "Device", "Sub1", "Sub2", "Sub3", "Sub4", "Sub5", "Click Time"].map(h => (
+                  {["Time", "Offer", "Country", "Device", "IP Address", "User Agent", "Referrer", "Landing Page", "Click ID", "Aff S1", "Aff S2", "Aff S3", "Aff S4", "Aff S5"].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-[10px] uppercase tracking-[0.2em] font-bold theme-text-muted whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -253,6 +257,16 @@ export function ReportsClickView() {
               <tbody className="divide-y theme-border">
                 {rows.map(r => (
                   <tr key={r.click_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition">
+                    <td className="px-4 py-3 text-xs theme-text-muted whitespace-nowrap">{fmtDate(r.created_at)}</td>
+                    <td className="px-4 py-3">
+                      <span className="text-xs font-semibold theme-text-main max-w-[150px] truncate block">{r.offer_name}</span>
+                    </td>
+                    <td className="px-4 py-3 text-xs theme-text-main">{nullCell(r.country_code)}</td>
+                    <td className="px-4 py-3 text-xs theme-text-main capitalize">{nullCell(r.device_type)}</td>
+                    <td className="px-4 py-3 font-mono text-[11px] text-slate-500 whitespace-nowrap">{nullCell(r.ip_address)}</td>
+                    <td className="px-4 py-3 text-[11px] text-slate-500 max-w-[160px] truncate" title={r.user_agent ?? ""}>{nullCell(r.user_agent)}</td>
+                    <td className="px-4 py-3 text-[11px] text-slate-500 max-w-[140px] truncate" title={r.referrer ?? ""}>{nullCell(r.referrer)}</td>
+                    <td className="px-4 py-3 text-[11px] text-slate-500 max-w-[140px] truncate" title={r.landing_page_url ?? ""}>{nullCell(r.landing_page_url)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
                         <span className="font-mono text-[11px] text-slate-500 select-all">{r.click_id.slice(0, 12)}…</span>
@@ -267,21 +281,11 @@ export function ReportsClickView() {
                         </button>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <span className="text-xs font-semibold theme-text-main max-w-[150px] truncate block">{r.offer_name}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-xs font-semibold theme-text-main">{nullCell(r.affiliate_name)}</div>
-                      <div className="text-[10px] theme-text-muted">{r.affiliate_email}</div>
-                    </td>
-                    <td className="px-4 py-3 text-xs theme-text-main">{nullCell(r.country_code)}</td>
-                    <td className="px-4 py-3 text-xs theme-text-main capitalize">{nullCell(r.device_type)}</td>
                     <td className="px-4 py-3 font-mono text-[11px] text-slate-500">{nullCell(r.sub1)}</td>
                     <td className="px-4 py-3 font-mono text-[11px] text-slate-500">{nullCell(r.sub2)}</td>
                     <td className="px-4 py-3 font-mono text-[11px] text-slate-500">{nullCell(r.sub3)}</td>
                     <td className="px-4 py-3 font-mono text-[11px] text-slate-500">{nullCell(r.sub4)}</td>
                     <td className="px-4 py-3 font-mono text-[11px] text-slate-500">{nullCell(r.sub5)}</td>
-                    <td className="px-4 py-3 text-xs theme-text-muted whitespace-nowrap">{fmtDate(r.created_at)}</td>
                   </tr>
                 ))}
               </tbody>

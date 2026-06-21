@@ -113,17 +113,19 @@ export function ReportsConversionView() {
       });
       analyticsApi.downloadCSV(
         result.rows.map(r => ({
-          conversion_id: r.id,
-          transaction_id: r.transaction_id,
-          click_id: r.click_id,
+          conversion_time: r.event_timestamp,
           offer: r.offer_name,
-          advertiser: r.advertiser_name ?? "",
+          status: r.conversion_status,
+          revenue: r.revenue_amount,
+          payout: r.payout_amount,
+          transaction_id: r.transaction_id,
+          ip_address: r.ip_address ?? "",
+          user_agent: r.user_agent ?? "",
+          source: r.source ?? "",
+          click_id: r.click_id,
           affiliate: r.affiliate_name,
           affiliate_email: r.affiliate_email,
-          status: r.conversion_status,
-          payout: r.payout_amount,
-          revenue: r.revenue_amount,
-          conversion_time: r.event_timestamp,
+          advertiser: r.advertiser_name ?? "",
           validated_at: r.validated_at ?? "",
           rejected_at: r.rejected_at ?? "",
           rejection_reason: r.rejection_reason ?? "",
@@ -268,10 +270,10 @@ export function ReportsConversionView() {
           <div className="p-8 text-center text-sm theme-text-muted">No conversions found matching the current filters.</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[1600px]">
+            <table className="w-full text-sm min-w-[1400px]">
               <thead>
                 <tr className="border-b theme-border bg-slate-50 dark:bg-slate-900">
-                  {["Conversion ID", "Transaction ID", "Click ID", "Offer", "Advertiser", "Affiliate", "Status", "Payout", "Revenue", "Conversion Time", "Validated At", "Rejected At", "Rejection Reason"].map(h => (
+                  {["Time", "Offer", "Status", "Revenue", "Payout", "Transaction ID", "IP Address", "User Agent", "Source", "Click ID"].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-[10px] uppercase tracking-[0.2em] font-bold theme-text-muted whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -279,35 +281,21 @@ export function ReportsConversionView() {
               <tbody className="divide-y theme-border">
                 {rows.map(r => (
                   <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition">
-                    <td className="px-4 py-3">
-                      <span className="font-mono text-[11px] text-slate-500">{r.id.slice(0, 12)}…</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="font-mono text-[11px] text-slate-500">{r.transaction_id || "—"}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="font-mono text-[11px] text-slate-500">{r.click_id ? r.click_id.slice(0, 10) + "…" : "—"}</span>
-                    </td>
+                    <td className="px-4 py-3 text-xs theme-text-muted whitespace-nowrap">{fmtDate(r.event_timestamp)}</td>
                     <td className="px-4 py-3">
                       <span className="text-xs font-semibold theme-text-main max-w-[140px] truncate block">{r.offer_name}</span>
                     </td>
-                    <td className="px-4 py-3">
-                      <span className="text-xs theme-text-muted max-w-[120px] truncate block">{r.advertiser_name || "—"}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-xs font-semibold theme-text-main">{r.affiliate_name}</div>
-                      <div className="text-[10px] theme-text-muted">{r.affiliate_email}</div>
-                    </td>
                     <td className="px-4 py-3">{statusBadge(r.conversion_status)}</td>
-                    <td className="px-4 py-3 text-xs font-semibold text-emerald-700">{fmt(r.payout_amount)}</td>
                     <td className="px-4 py-3 text-xs font-semibold text-cyan-700">{fmt(r.revenue_amount)}</td>
-                    <td className="px-4 py-3 text-xs theme-text-muted whitespace-nowrap">{fmtDate(r.event_timestamp)}</td>
-                    <td className="px-4 py-3 text-xs theme-text-muted whitespace-nowrap">{r.validated_at ? fmtDate(r.validated_at) : "—"}</td>
-                    <td className="px-4 py-3 text-xs theme-text-muted whitespace-nowrap">{r.rejected_at ? fmtDate(r.rejected_at) : "—"}</td>
+                    <td className="px-4 py-3 text-xs font-semibold text-emerald-700">{fmt(r.payout_amount)}</td>
                     <td className="px-4 py-3">
-                      {r.rejection_reason
-                        ? <span className="text-xs text-rose-600 max-w-[160px] truncate block" title={r.rejection_reason}>{r.rejection_reason}</span>
-                        : <span className="text-xs theme-text-muted">—</span>}
+                      <span className="font-mono text-[11px] text-slate-500">{r.transaction_id || "—"}</span>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-[11px] text-slate-500 whitespace-nowrap">{r.ip_address || "—"}</td>
+                    <td className="px-4 py-3 text-[11px] text-slate-500 max-w-[160px] truncate" title={r.user_agent ?? ""}>{r.user_agent || "—"}</td>
+                    <td className="px-4 py-3 text-[11px] text-slate-500 max-w-[140px] truncate" title={r.source ?? ""}>{r.source || "—"}</td>
+                    <td className="px-4 py-3">
+                      <span className="font-mono text-[11px] text-slate-500">{r.click_id ? r.click_id.slice(0, 10) + "…" : "—"}</span>
                     </td>
                   </tr>
                 ))}

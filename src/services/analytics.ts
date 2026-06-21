@@ -126,6 +126,10 @@ export interface ClickReportRow {
   affiliate_email: string;
   country_code: string | null;
   device_type: string | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  referrer: string | null;
+  landing_page_url: string | null;
   sub1: string | null;
   sub2: string | null;
   sub3: string | null;
@@ -149,6 +153,9 @@ export interface ConversionReportRow {
   validated_at: string | null;
   rejected_at: string | null;
   rejection_reason: string | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  source: string | null;
 }
 
 export interface DailyReportRow {
