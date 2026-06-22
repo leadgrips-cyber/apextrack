@@ -4,6 +4,12 @@ import * as offersApi from "../../services/offers";
 import * as advertisersApi from "../../services/advertisers";
 import { listCategories } from "../../services/offerCategories";
 import type { CategoryRecord } from "../../services/offerCategories";
+import {
+  TrackingPlatformSection,
+  IntegrationConfig,
+  configToIntegrationSettings,
+  integrationSettingsToConfig,
+} from "./TrackingPlatformSection";
 
 type OfferRecord = offersApi.OfferRecord;
 type AdvertiserRecord = advertisersApi.AdvertiserRecord;
@@ -74,6 +80,9 @@ export function OfferGeneralTab({ offer, advertisers, onSaved }: Props) {
   const [logoError, setLogoError] = useState<string | null>(null);
   const logoRef = useRef<HTMLInputElement>(null);
   const [categoryOptions, setCategoryOptions] = useState<CategoryRecord[]>([]);
+  const [integrationConfig, setIntegrationConfig] = useState<IntegrationConfig>(
+    () => integrationSettingsToConfig(offer.integration_settings)
+  );
 
   useEffect(() => {
     listCategories(true).then(setCategoryOptions).catch(() => {/* non-fatal */});
@@ -147,6 +156,7 @@ export function OfferGeneralTab({ offer, advertisers, onSaved }: Props) {
         terms: form.terms.trim() || undefined,
         traffic_rules: trafficRulesText ? { text: trafficRulesText } : null,
         advertiser_id: form.advertiser_id.trim() || null,
+        integration_settings: configToIntegrationSettings(integrationConfig),
       };
       const updated = await offersApi.updateOffer(offer.id, payload);
       onSaved(updated);
@@ -380,6 +390,12 @@ export function OfferGeneralTab({ offer, advertisers, onSaved }: Props) {
           </div>
         </div>
       </div>
+
+      <TrackingPlatformSection
+        config={integrationConfig}
+        landingPageUrl={form.landing_page_url}
+        onChange={setIntegrationConfig}
+      />
 
       <div className="flex justify-end">
         <button

@@ -15,8 +15,8 @@ import { getOfferSummary } from "../repositories/offer.repository.js";
 
 // Strip advertiser and internal fields before returning data to publisher role.
 // Publishers must never see advertiser_id, advertiser_name, admin_notes, created_by_admin_id, or conversion_approval_mode.
-function toPublisherOffer(offer: OfferRecord): Omit<OfferRecord, 'advertiser_id' | 'advertiser_name' | 'admin_notes' | 'created_by_admin_id' | 'conversion_approval_mode'> {
-  const { advertiser_id, advertiser_name, admin_notes, created_by_admin_id, conversion_approval_mode, ...safe } = offer;
+function toPublisherOffer(offer: OfferRecord): Omit<OfferRecord, 'advertiser_id' | 'advertiser_name' | 'admin_notes' | 'created_by_admin_id' | 'conversion_approval_mode' | 'integration_settings'> {
+  const { advertiser_id, advertiser_name, admin_notes, created_by_admin_id, conversion_approval_mode, integration_settings, ...safe } = offer;
   return safe;
 }
 

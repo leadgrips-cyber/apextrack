@@ -14,10 +14,14 @@ import {
   Archive,
   Shield,
   Gauge,
+  Cpu,
+  Copy,
+  Check,
 } from "lucide-react";
 import * as offersApi from "../../services/offers";
 import * as advertisersApi from "../../services/advertisers";
 import * as summaryApi from "../../services/offerSummary";
+import { integrationSettingsToConfig, buildPostbackUrl } from "./TrackingPlatformSection";
 import { OfferGeneralTab } from "./OfferGeneralTab";
 import { OfferLandingPagesTab } from "./OfferLandingPagesTab";
 import { OfferCreativesTab } from "./OfferCreativesTab";
@@ -68,6 +72,7 @@ export function OfferDetailView({ offer: initialOffer, advertisers, onBack, onOf
   const [summary, setSummary] = useState<OfferSummary | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [statusActing, setStatusActing] = useState(false);
+  const [copiedPostback, setCopiedPostback] = useState(false);
 
   useEffect(() => {
     loadSummary();
@@ -299,6 +304,57 @@ export function OfferDetailView({ offer: initialOffer, advertisers, onBack, onOf
               <p className="text-xs text-slate-400 text-center py-2">Unable to load stats</p>
             )}
           </div>
+
+          {/* Integration Details widget */}
+          {(() => {
+            const intConfig = integrationSettingsToConfig(offer.integration_settings);
+            const postbackUrl = buildPostbackUrl(intConfig);
+            return (
+              <div className="theme-bg-card border theme-border rounded-3xl p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <Cpu className="w-4 h-4 text-cyan-500" />
+                  <h3 className="text-xs font-bold uppercase tracking-widest theme-text-muted">Integration Details</h3>
+                </div>
+                <dl className="space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <dt className="text-xs theme-text-muted flex-shrink-0">Platform</dt>
+                    <dd className="text-xs font-semibold theme-text-main">{intConfig.platform}</dd>
+                  </div>
+                  <div className="border-t theme-border my-1" />
+                  {[
+                    { label: "Click ID", value: intConfig.click_id_token },
+                    { label: "Tx ID", value: intConfig.transaction_id_token },
+                    { label: "Status", value: intConfig.status_token },
+                    { label: "Payout", value: intConfig.payout_token },
+                    { label: "Revenue", value: intConfig.revenue_token },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="flex items-center justify-between gap-2">
+                      <dt className="text-xs theme-text-muted flex-shrink-0">{label}</dt>
+                      <dd className="text-[11px] font-mono text-cyan-600 text-right truncate max-w-[120px]" title={value}>{value}</dd>
+                    </div>
+                  ))}
+                  <div className="border-t theme-border my-1" />
+                  <div>
+                    <div className="text-xs theme-text-muted mb-1.5">Postback URL</div>
+                    <div className="rounded-xl border border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-950/30 px-2.5 py-2 text-[10px] font-mono text-cyan-700 dark:text-cyan-300 break-all leading-relaxed">
+                      {postbackUrl}
+                    </div>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(postbackUrl).catch(() => {});
+                        setCopiedPostback(true);
+                        setTimeout(() => setCopiedPostback(false), 1800);
+                      }}
+                      className="mt-1.5 w-full flex items-center justify-center gap-1.5 rounded-xl border theme-border px-3 py-1.5 text-xs font-semibold theme-text-secondary hover:theme-text-main transition"
+                    >
+                      {copiedPostback ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                      {copiedPostback ? "Copied!" : "Copy Postback URL"}
+                    </button>
+                  </div>
+                </dl>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>

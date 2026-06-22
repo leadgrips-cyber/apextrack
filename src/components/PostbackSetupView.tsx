@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import {
   Radio, RefreshCw, Play, Code, CheckCircle,
   Trash2, Edit2, X, Plus, AlertCircle,
-  ToggleLeft, ToggleRight,
+  ToggleLeft, ToggleRight, Copy, Check, BookOpen,
 } from "lucide-react";
 import * as postbackApi from "../services/publisherPostbacks";
 import type { PublisherPostback } from "../services/publisherPostbacks";
@@ -37,6 +37,9 @@ export function PostbackSetupView({ offers }: PostbackSetupViewProps) {
   const [testUrl, setTestUrl] = useState("");
   const [isTesting, setIsTesting] = useState(false);
   const [testLog, setTestLog] = useState<string[]>([]);
+
+  // token library copy state
+  const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
   const TOKEN_LIST = [
     "{click_id}", "{offer_id}", "{publisher_id}",
@@ -392,10 +395,103 @@ export function PostbackSetupView({ offers }: PostbackSetupViewProps) {
           </div>
         </div>
 
-        {/* Right column: tokens + test tool */}
+        {/* Right column: token library + test tool */}
         <div className="lg:col-span-5 space-y-6">
 
-          {/* Token reference */}
+          {/* Token Library */}
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm space-y-4">
+            <h3 className="text-slate-950 text-xs font-bold uppercase font-mono tracking-wider flex items-center gap-1.5">
+              <BookOpen className="w-4 h-4 text-cyan-500" />
+              Available LeadGrips Tokens
+            </h3>
+            <p className="text-[11px] text-slate-500">
+              Use these tokens in your postback URL. They are replaced with live values at delivery time.
+            </p>
+            <div className="overflow-hidden rounded-xl border border-slate-200">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="px-3 py-2 text-left font-semibold text-slate-500 font-mono text-[10px] uppercase tracking-wider">Token</th>
+                    <th className="px-3 py-2 text-left font-semibold text-slate-500 text-[10px] uppercase tracking-wider">Description</th>
+                    <th className="px-3 py-2 w-8" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {[
+                    { token: "{click_id}",      desc: "Unique Click ID" },
+                    { token: "{status}",         desc: "Conversion Status" },
+                    { token: "{payout}",         desc: "Affiliate Payout" },
+                    { token: "{revenue}",        desc: "Advertiser Revenue" },
+                    { token: "{sub1}",           desc: "Affiliate Sub ID 1" },
+                    { token: "{sub2}",           desc: "Affiliate Sub ID 2" },
+                    { token: "{sub3}",           desc: "Affiliate Sub ID 3" },
+                    { token: "{sub4}",           desc: "Affiliate Sub ID 4" },
+                    { token: "{sub5}",           desc: "Affiliate Sub ID 5" },
+                  ].map(({ token, desc }) => (
+                    <tr key={token} className="hover:bg-slate-50 transition">
+                      <td className="px-3 py-2.5 font-mono text-cyan-700 text-[11px] whitespace-nowrap">{token}</td>
+                      <td className="px-3 py-2.5 text-slate-600 text-[11px]">{desc}</td>
+                      <td className="px-3 py-2.5">
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(token).catch(() => {});
+                            setCopiedToken(token);
+                            setTimeout(() => setCopiedToken(null), 1500);
+                          }}
+                          title={`Copy ${token}`}
+                          className="p-1 rounded hover:bg-slate-100 transition"
+                        >
+                          {copiedToken === token
+                            ? <Check className="w-3 h-3 text-emerald-500" />
+                            : <Copy className="w-3 h-3 text-slate-400" />}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Example postbacks */}
+            <div>
+              <div className="text-[10px] uppercase tracking-wider font-bold text-slate-400 pb-2 border-b border-slate-100 mb-3">
+                Example Postbacks
+              </div>
+              <div className="space-y-3">
+                {[
+                  { label: "Voluum", url: "https://yourtracker.com/postback?cid={click_id}&payout={payout}&status={status}" },
+                  { label: "Binom",  url: "https://yourtracker.com/postback?subid={click_id}&sum={payout}" },
+                  { label: "RedTrack", url: "https://yourtracker.com/postback?cid={click_id}&payout={payout}" },
+                  { label: "BeMob",  url: "https://yourtracker.com/postback?subid={click_id}&payout={payout}" },
+                  { label: "CPVLab", url: "https://yourtracker.com/postback?subid={click_id}&payout={payout}" },
+                ].map(({ label, url }) => (
+                  <div key={label}>
+                    <div className="text-[10px] font-semibold text-slate-500 mb-1">{label}</div>
+                    <div className="flex items-start gap-1.5">
+                      <div className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[10px] font-mono text-slate-600 break-all leading-relaxed">
+                        {url}
+                      </div>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(url).catch(() => {});
+                          setCopiedToken(`ex-${label}`);
+                          setTimeout(() => setCopiedToken(null), 1500);
+                        }}
+                        className="flex-shrink-0 p-1.5 rounded-lg hover:bg-slate-100 transition mt-0.5"
+                        title="Copy"
+                      >
+                        {copiedToken === `ex-${label}`
+                          ? <Check className="w-3 h-3 text-emerald-500" />
+                          : <Copy className="w-3 h-3 text-slate-400" />}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Token reference (existing, preserved) */}
           <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm space-y-4">
             <h3 className="text-slate-950 text-xs font-bold uppercase font-mono tracking-wider flex items-center gap-1">
               <Code className="w-4 h-4 text-cyan-500" />

@@ -1,4 +1,4 @@
-export type PostbackStatus = 'pending' | 'approved' | 'rejected';
+export type PostbackStatus = 'pending' | 'approved' | 'rejected' | 'review_queue';
 
 export interface PostbackRequestPayload {
   click_id: string;

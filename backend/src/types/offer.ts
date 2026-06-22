@@ -29,6 +29,7 @@ export interface OfferRecord {
   advertiser_id?: string | null;
   advertiser_name?: string | null;
   created_by_admin_id?: string | null;
+  integration_settings?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }
@@ -58,6 +59,7 @@ export interface OfferCreatePayload {
   tracking_protocol?: TrackingProtocol;
   admin_notes?: string;
   advertiser_id?: string | null;
+  integration_settings?: Record<string, unknown> | null;
 }
 
 export interface OfferUpdatePayload {
@@ -85,6 +87,7 @@ export interface OfferUpdatePayload {
   tracking_protocol?: TrackingProtocol;
   admin_notes?: string;
   advertiser_id?: string | null;
+  integration_settings?: Record<string, unknown> | null;
 }
 
 export interface OfferFilterParams {

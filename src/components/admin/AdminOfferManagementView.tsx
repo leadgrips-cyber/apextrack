@@ -4,6 +4,13 @@ import * as offersApi from "../../services/offers";
 import * as advertisersApi from "../../services/advertisers";
 import { OfferEventsPanel } from "./OfferEventsPanel";
 import { OfferDetailView } from "./OfferDetailView";
+import {
+  TrackingPlatformSection,
+  IntegrationConfig,
+  DEFAULT_INTEGRATION_CONFIG,
+  configToIntegrationSettings,
+  integrationSettingsToConfig,
+} from "./TrackingPlatformSection";
 
 type OfferRecord = offersApi.OfferRecord;
 type AdvertiserRecord = advertisersApi.AdvertiserRecord;
@@ -124,6 +131,7 @@ export function AdminOfferManagementView({ openCreateOnMount }: { openCreateOnMo
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const [integrationConfig, setIntegrationConfig] = useState<IntegrationConfig>(DEFAULT_INTEGRATION_CONFIG);
 
   useEffect(() => {
     loadOffers();
@@ -193,6 +201,7 @@ export function AdminOfferManagementView({ openCreateOnMount }: { openCreateOnMo
   function openCreate() {
     setEditingOffer(null);
     setFormData(emptyForm);
+    setIntegrationConfig(DEFAULT_INTEGRATION_CONFIG);
     setFormError(null);
     setLogoUploadError(null);
     setView("create");
@@ -201,6 +210,7 @@ export function AdminOfferManagementView({ openCreateOnMount }: { openCreateOnMo
   function openEdit(offer: OfferRecord) {
     setEditingOffer(offer);
     setFormData(offerToForm(offer));
+    setIntegrationConfig(integrationSettingsToConfig(offer.integration_settings));
     setFormError(null);
     setLogoUploadError(null);
     setView("edit");
@@ -209,6 +219,7 @@ export function AdminOfferManagementView({ openCreateOnMount }: { openCreateOnMo
   function closeForm() {
     setView("list");
     setEditingOffer(null);
+    setIntegrationConfig(DEFAULT_INTEGRATION_CONFIG);
     setFormError(null);
     setLogoUploadError(null);
   }
@@ -240,6 +251,7 @@ export function AdminOfferManagementView({ openCreateOnMount }: { openCreateOnMo
     setFormError(null);
     try {
       const payload = formToPayload(formData);
+      payload.integration_settings = configToIntegrationSettings(integrationConfig);
       let saved: OfferRecord;
       if (editingOffer) {
         saved = await offersApi.updateOffer(editingOffer.id, payload);
@@ -487,6 +499,14 @@ export function AdminOfferManagementView({ openCreateOnMount }: { openCreateOnMo
               </button>
             </div>
           </form>
+        </div>
+
+        <div className="max-w-2xl">
+          <TrackingPlatformSection
+            config={integrationConfig}
+            landingPageUrl={formData.landing_page_url}
+            onChange={setIntegrationConfig}
+          />
         </div>
       </div>
     );

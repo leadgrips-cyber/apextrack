@@ -94,9 +94,10 @@ export async function insertOffer(payload: OfferCreatePayload & { created_by_adm
        advertiser_id,
        created_by_admin_id,
        affiliate_revenue_share_percent,
+       integration_settings,
        created_at,
        updated_at
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,NOW(),NOW())
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,NOW(),NOW())
      RETURNING id`,
     [
       payload.name,
@@ -124,6 +125,7 @@ export async function insertOffer(payload: OfferCreatePayload & { created_by_adm
       payload.advertiser_id || null,
       payload.created_by_admin_id,
       payload.affiliate_revenue_share_percent ?? null,
+      payload.integration_settings ?? null,
     ]
   );
   const inserted = await findOfferById(result.rows[0].id);
@@ -164,6 +166,7 @@ export async function updateOfferById(offerId: number, updates: OfferUpdatePaylo
   if (updates.tracking_protocol !== undefined) addField('tracking_protocol', updates.tracking_protocol);
   if (updates.admin_notes !== undefined) addField('admin_notes', updates.admin_notes);
   if (updates.advertiser_id !== undefined) addField('advertiser_id', updates.advertiser_id || null);
+  if (updates.integration_settings !== undefined) addField('integration_settings', updates.integration_settings ?? null);
 
   if (fields.length === 0) {
     return findOfferById(offerId);

@@ -31,6 +31,7 @@ export interface OfferRecord {
   admin_notes?: string | null;
   advertiser_id?: string | null;
   advertiser_name?: string | null;
+  integration_settings?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }
@@ -58,6 +59,7 @@ export interface OfferFormPayload {
   terms?: string;
   traffic_rules?: Record<string, unknown> | null;
   advertiser_id?: string | null;
+  integration_settings?: Record<string, unknown> | null;
 }
 
 export async function listAdminOffers(filters?: {
