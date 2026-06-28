@@ -66,14 +66,7 @@ export function PublisherAuth({ currentView, setView, onLoginSuccess, onAdvertis
   const [countryOpen, setCountryOpen] = useState(false);
   const countryRef = useRef<HTMLDivElement>(null);
 
-  const [affiliateDuration, setAffiliateDuration] = useState("");
-  const [monthlyTrafficVolume, setMonthlyTrafficVolume] = useState("");
-  const [currentNetworks, setCurrentNetworks] = useState("");
-  const [trafficSources, setTrafficSources] = useState("");
-  const [promotionMethods, setPromotionMethods] = useState("");
-  const [mainNiches, setMainNiches] = useState("");
-
-  // STEP 4 — Contact Information
+  // STEP 3 — Contact Information
   const [telegramUsername, setTelegramUsername] = useState("");
   const [teamsId, setTeamsId] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
@@ -168,8 +161,8 @@ const handleLoginSubmit = async (e: React.FormEvent) => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Terms is step 5 without questions, step 6 when questions exist
-  const termsStep = publisherQuestions.length > 0 ? 6 : 5;
+  // Terms is step 4 without questions, step 5 when questions exist
+  const termsStep = publisherQuestions.length > 0 ? 5 : 4;
 
   // Move forward in registration steps
   const nextRegisterStep = () => {
@@ -202,20 +195,13 @@ const handleLoginSubmit = async (e: React.FormEvent) => {
     }
 
     if (registerStep === 3) {
-      if (!affiliateDuration || !monthlyTrafficVolume || !trafficSources || !promotionMethods || !mainNiches) {
-        setErrorMessage("All traffic and promotion fields are required to verify affiliate quality.");
-        return;
-      }
-    }
-
-    if (registerStep === 4) {
       if (!telegramUsername || !teamsId) {
         setErrorMessage("Telegram username and Microsoft Teams ID are required for account manager review.");
         return;
       }
     }
 
-    if (registerStep === 5 && publisherQuestions.length > 0) {
+    if (registerStep === 4 && publisherQuestions.length > 0) {
       for (const q of publisherQuestions) {
         if (q.is_required && !dynAnswers[q.id]?.trim()) {
           setErrorMessage("Please answer all required questions before proceeding.");
@@ -579,9 +565,8 @@ try {
               {[
                 { step: 1, label: "Account Credentials" },
                 { step: 2, label: "Company & Address" },
-                { step: 3, label: "Traffic & Promotion" },
-                { step: 4, label: "Contact Details" },
-                ...(publisherQuestions.length > 0 ? [{ step: 5, label: "Additional Questions" }] : []),
+                { step: 3, label: "Contact Details" },
+                ...(publisherQuestions.length > 0 ? [{ step: 4, label: "Additional Questions" }] : []),
                 { step: termsStep, label: "Terms & Agreement" },
               ].map(({ step, label }, idx, arr) => {
                 const isActive   = registerStep === step;
@@ -821,9 +806,8 @@ try {
                 const steps = [
                   { step: 1, label: "Account" },
                   { step: 2, label: "Address" },
-                  { step: 3, label: "Traffic" },
-                  { step: 4, label: "Contact" },
-                  ...(publisherQuestions.length > 0 ? [{ step: 5, label: "Questions" }] : []),
+                  { step: 3, label: "Contact" },
+                  ...(publisherQuestions.length > 0 ? [{ step: 4, label: "Questions" }] : []),
                   { step: termsStep, label: "Terms" },
                 ];
                 return (
@@ -1058,101 +1042,8 @@ try {
                   </div>
                 )}
 
-                {/* STEP 3: Traffic Information */}
+                {/* STEP 3: Contact Information */}
                 {registerStep === 3 && (
-                  <div className="space-y-5 animate-fadeIn">
-                    <div>
-                      <h3 className="text-base font-bold flex items-center gap-2 mb-0.5" style={{ color: "#0f172a" }}>
-                        <Globe className="w-4 h-4 text-[#065907]" /> Traffic & Promotion Methods
-                      </h3>
-                      <p className="text-xs font-medium" style={{ color: "#475569" }}>Tell us about your traffic sources and promotion strategy.</p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-semibold uppercase tracking-wide leading-tight" style={{ color: "#334155" }}>
-                          Affiliate Experience?
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={affiliateDuration}
-                          onChange={(e) => setAffiliateDuration(e.target.value)}
-                          className="mt-1 block w-full px-3 py-2 bg-slate-50 border theme-border rounded-xl theme-text-main"
-                          placeholder="e.g. 4 Years"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold uppercase tracking-wide leading-tight" style={{ color: "#334155" }}>
-                          Monthly traffic volume?
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={monthlyTrafficVolume}
-                          onChange={(e) => setMonthlyTrafficVolume(e.target.value)}
-                          className="mt-1 block w-full px-3 py-2 bg-slate-50 border theme-border rounded-xl theme-text-main"
-                          placeholder="e.g. 150,000 Click Hits"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wide" style={{ color: "#334155" }}>Current affiliate networks</label>
-                      <input
-                        type="text"
-                        required
-                        value={currentNetworks}
-                        onChange={(e) => setCurrentNetworks(e.target.value)}
-                        className="mt-1 block w-full px-3 py-2.5 theme-bg-well border theme-border rounded-xl theme-text-main"
-                        placeholder="e.g. OGAds, ClickDealer, MaxBounty"
-                      />
-                    </div>
-
-                    {/* niches vertical free text field! NO DROPDOWN */}
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wide" style={{ color: "#334155" }}>
-                        Main niches / Verticals
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={mainNiches}
-                        onChange={(e) => setMainNiches(e.target.value)}
-                        className="mt-1 block w-full px-3 py-2.5 theme-bg-well border border-[#065907]/40 rounded-xl theme-text-main font-semibold"
-                        placeholder="e.g. Finance leads, mobile helper apps utility overlays, locked content"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wide" style={{ color: "#334155" }}>Describe Your Traffic Sources</label>
-                      <textarea
-                        required
-                        rows={2}
-                        value={trafficSources}
-                        onChange={(e) => setTrafficSources(e.target.value)}
-                        className="mt-1 block w-full px-3 py-2 theme-bg-well border theme-border rounded-xl theme-text-main text-xs"
-                        placeholder="Explain how users find your links (e.g. organic TikTok content, native RevContent banners)..."
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wide" style={{ color: "#334155" }}>Describe your promotion methods</label>
-                      <textarea
-                        required
-                        rows={2}
-                        value={promotionMethods}
-                        onChange={(e) => setPromotionMethods(e.target.value)}
-                        className="mt-1 block w-full px-3 py-2 theme-bg-well border theme-border rounded-xl theme-text-main text-xs"
-                        placeholder="Explain conversion techniques (e.g. standard reward locker page, direct pre-landers, email lists)..."
-                      />
-                    </div>
-
-                  </div>
-                )}
-
-                {/* STEP 4: Contact Information */}
-                {registerStep === 4 && (
                   <div className="space-y-5 animate-fadeIn">
                     <div>
                       <h3 className="text-base font-bold flex items-center gap-2 mb-0.5" style={{ color: "#0f172a" }}>
@@ -1200,8 +1091,8 @@ try {
                   </div>
                 )}
 
-                {/* STEP 5: Dynamic Signup Questions (only shown when questions exist) */}
-                {registerStep === 5 && publisherQuestions.length > 0 && (
+                {/* STEP 4: Dynamic Signup Questions (only shown when questions exist) */}
+                {registerStep === 4 && publisherQuestions.length > 0 && (
                   <div className="space-y-5 animate-fadeIn">
                     <div>
                       <h3 className="text-base font-bold flex items-center gap-2 mb-0.5" style={{ color: "#0f172a" }}>

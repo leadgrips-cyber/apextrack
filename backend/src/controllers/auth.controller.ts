@@ -82,6 +82,11 @@ export async function register(req: Request, res: Response, next: NextFunction) 
       updatedAt: publisher.updated_at,
     });
   } catch (error) {
+    const err = error as { statusCode?: number; message?: string };
+    if (err.statusCode === 409) {
+      res.status(409).json({ message: err.message });
+      return;
+    }
     next(error);
   }
 }

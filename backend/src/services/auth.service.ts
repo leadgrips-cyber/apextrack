@@ -113,7 +113,7 @@ export async function login(request: LoginRequest): Promise<AuthResponse> {
 export async function register(request: RegisterRequest): Promise<PublisherRecord> {
   const existing = await authRepository.findPublisherByEmail(request.email);
   if (existing) {
-    throw new Error('Publisher account already exists');
+    throw Object.assign(new Error('An account with this email already exists.'), { statusCode: 409 });
   }
 
   const passwordHash = await hashPassword(request.password);
