@@ -72,6 +72,20 @@ export async function handleDelete(req: AuthRequest, res: Response, next: NextFu
   }
 }
 
+export async function handleGetResponsesByPublisher(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { publisherId } = req.params;
+    if (!publisherId) {
+      res.status(400).json({ message: 'publisherId is required' });
+      return;
+    }
+    const responses = await svc.getResponsesByPublisher(publisherId);
+    res.json({ responses });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function handleSubmitResponses(req: Request, res: Response, next: NextFunction) {
   try {
     const { publisher_id, advertiser_id, responses } = req.body as {

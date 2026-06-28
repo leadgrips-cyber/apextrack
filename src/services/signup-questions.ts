@@ -46,14 +46,45 @@ export async function submitSignupResponses(payload: {
   advertiser_id?: string;
   responses: Array<{ question_id: number; answer: string }>;
 }): Promise<void> {
-  await fetch(`${API_URL}/signup-questions/responses`, {
+  const res = await fetch(`${API_URL}/signup-questions/responses`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(
+      (data as { message?: string }).message ||
+        `Failed to save signup responses (HTTP ${res.status})`
+    );
+  }
 }
 
 // ── Admin ───────────────────────────────────────────────────────────────────
+
+export interface SignupQuestionResponse {
+  question_id: number;
+  question_text: string;
+  field_type: string;
+  answer: string;
+}
+
+export async function getPublisherSignupResponses(
+  publisherId: string
+): Promise<SignupQuestionResponse[]> {
+  const res = await fetch(`${API_URL}/signup-questions/publisher/${publisherId}`, {
+    headers: adminHeaders(),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(
+      (data as { message?: string }).message ||
+        `Failed to load signup responses (HTTP ${res.status})`
+    );
+  }
+  const data = await res.json();
+  return (data.responses ?? []) as SignupQuestionResponse[];
+}
 
 export async function listSignupQuestions(): Promise<SignupQuestion[]> {
   const res = await fetch(`${API_URL}/signup-questions`, {

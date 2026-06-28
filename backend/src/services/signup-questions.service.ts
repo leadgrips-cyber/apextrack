@@ -78,3 +78,7 @@ export async function submitResponses(
 
   await repo.saveResponses(publisherId ?? null, advertiserId ?? null, responses);
 }
+
+export async function getResponsesByPublisher(publisherId: string) {
+  return repo.getResponsesByPublisher(publisherId);
+}

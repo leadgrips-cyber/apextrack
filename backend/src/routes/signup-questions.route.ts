@@ -8,6 +8,7 @@ import {
   handleUpdate,
   handleDelete,
   handleSubmitResponses,
+  handleGetResponsesByPublisher,
 } from "../controllers/signup-questions.controller.js";
 
 const router = Router();
@@ -17,6 +18,7 @@ router.get('/public', handleListPublic);
 router.post('/responses', handleSubmitResponses);
 
 // Admin-only
+router.get('/publisher/:publisherId', authenticateJwt, authorizeRoles('admin'), handleGetResponsesByPublisher);
 router.get('/',    authenticateJwt, authorizeRoles('admin'), handleListAll);
 router.post('/',   authenticateJwt, authorizeRoles('admin'), handleCreate);
 router.put('/:id', authenticateJwt, authorizeRoles('admin'), handleUpdate);

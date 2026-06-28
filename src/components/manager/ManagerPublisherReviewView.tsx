@@ -5,6 +5,10 @@ import {
   savePublisherManagerNotes,
   type ManagerPublisher,
 } from "../../services/managers";
+import {
+  getPublisherSignupResponses,
+  type SignupQuestionResponse,
+} from "../../services/signup-questions";
 
 interface Props {
   managerId: string;
@@ -50,6 +54,8 @@ export function ManagerPublisherReviewView({ managerId }: Props) {
   const [draftRec, setDraftRec] = useState<Recommendation>(null);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  const [signupResponses, setSignupResponses] = useState<SignupQuestionResponse[]>([]);
+  const [signupResponsesLoading, setSignupResponsesLoading] = useState(false);
 
   const load = () => {
     if (!managerId) return;
@@ -78,6 +84,12 @@ export function ManagerPublisherReviewView({ managerId }: Props) {
     setDraftNotes(getNotes(p));
     setDraftRec(getRecommendation(p));
     setSaveMsg(null);
+    setSignupResponses([]);
+    setSignupResponsesLoading(true);
+    getPublisherSignupResponses(p.id)
+      .then(setSignupResponses)
+      .catch(() => {})
+      .finally(() => setSignupResponsesLoading(false));
   };
 
   const handleSave = async () => {
@@ -252,6 +264,24 @@ export function ManagerPublisherReviewView({ managerId }: Props) {
                   <p className="font-mono text-sm theme-text-main">{new Date(selected.created_at).toLocaleDateString()}</p>
                 </div>
               </div>
+
+              {(signupResponsesLoading || signupResponses.length > 0) && (
+                <div className="border-t theme-border pt-5">
+                  <h3 className="text-sm font-bold theme-text-main mb-4">Signup Answers</h3>
+                  {signupResponsesLoading ? (
+                    <p className="text-xs theme-text-muted">Loading…</p>
+                  ) : (
+                    <dl className="space-y-3">
+                      {signupResponses.map((r) => (
+                        <div key={r.question_id}>
+                          <dt className="text-xs font-semibold theme-text-secondary">{r.question_text}</dt>
+                          <dd className="text-sm theme-text-main mt-0.5 whitespace-pre-wrap break-words">{r.answer || <span className="italic theme-text-muted">—</span>}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
+                </div>
+              )}
 
               <div className="border-t theme-border pt-5">
                 <h3 className="text-sm font-bold theme-text-main mb-4 flex items-center gap-2">

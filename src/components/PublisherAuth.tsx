@@ -98,6 +98,8 @@ export function PublisherAuth({ currentView, setView, onLoginSuccess, onAdvertis
 
   // After registration: show "check your email" notice
   const [pendingVerification, setPendingVerification] = useState<{ email: string } | null>(null);
+  // Non-fatal error when signup responses fail to save (registration still succeeded)
+  const [signupSaveError, setSignupSaveError] = useState<string | null>(null);
 
   // After login blocked by unverified email: show resend UI
   const [loginUnverified, setLoginUnverified] = useState<{ email: string } | null>(null);
@@ -275,7 +277,11 @@ try {
     if (responses.length > 0) {
       try {
         await submitSignupResponses({ publisher_id: regResult.id as string, responses });
-      } catch { /* non-blocking */ }
+      } catch (err) {
+            setSignupSaveError(
+              (err as Error).message || "Your signup answers could not be saved. Please contact support."
+            );
+          }
     }
   }
 
@@ -343,6 +349,11 @@ try {
               </div>
             </div>
             <h2 className="text-xl font-black theme-text-main">Check Your Email</h2>
+            {signupSaveError && (
+              <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-700 text-left">
+                <strong>Note:</strong> Your account was created, but your signup answers could not be saved: {signupSaveError}
+              </div>
+            )}
             <p className="text-sm theme-text-muted leading-relaxed">
               Your account has been created. We sent a verification link to{" "}
               <strong className="theme-text-main">{pendingVerification.email}</strong>.

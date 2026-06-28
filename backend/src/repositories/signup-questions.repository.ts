@@ -1,10 +1,17 @@
-import { query } from "../db/index.js";
+import { query, pool } from "../db/index.js";
 import {
   SignupQuestionRecord,
   CreateQuestionPayload,
   UpdateQuestionPayload,
   QuestionResponseInput,
 } from "../types/signup-questions.js";
+
+export interface SignupQuestionResponseRecord {
+  question_id: number;
+  question_text: string;
+  field_type: string;
+  answer: string;
+}
 
 export async function listAllQuestions(): Promise<SignupQuestionRecord[]> {
   const result = await query<SignupQuestionRecord>(
@@ -95,11 +102,35 @@ export async function saveResponses(
   advertiserId: string | null,
   responses: QuestionResponseInput[]
 ): Promise<void> {
-  for (const r of responses) {
-    await query(
-      `INSERT INTO signup_question_responses (publisher_id, advertiser_id, question_id, answer)
-       VALUES ($1, $2, $3, $4)`,
-      [publisherId, advertiserId, r.question_id, r.answer]
-    );
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    for (const r of responses) {
+      await client.query(
+        `INSERT INTO signup_question_responses (publisher_id, advertiser_id, question_id, answer)
+         VALUES ($1, $2, $3, $4)`,
+        [publisherId, advertiserId, r.question_id, r.answer]
+      );
+    }
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
   }
+}
+
+export async function getResponsesByPublisher(
+  publisherId: string
+): Promise<SignupQuestionResponseRecord[]> {
+  const result = await query<SignupQuestionResponseRecord>(
+    `SELECT sqr.question_id, sq.question_text, sq.field_type, sqr.answer
+     FROM signup_question_responses sqr
+     JOIN signup_questions sq ON sq.id = sqr.question_id
+     WHERE sqr.publisher_id = $1
+     ORDER BY sq.sort_order ASC, sqr.question_id ASC`,
+    [publisherId]
+  );
+  return result.rows;
 }

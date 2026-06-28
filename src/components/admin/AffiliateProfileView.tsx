@@ -10,6 +10,10 @@ import {
   Mail,
 } from "lucide-react";
 import * as publishersApi from "../../services/publishers";
+import {
+  getPublisherSignupResponses,
+  type SignupQuestionResponse,
+} from "../../services/signup-questions";
 
 interface AffiliateProfileViewProps {
   affiliate: {
@@ -131,6 +135,9 @@ export function AffiliateProfileView({ affiliate: initialAffiliate, onBack }: Af
   const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
   const [resendingVerification, setResendingVerification] = useState(false);
 
+  const [signupResponses, setSignupResponses] = useState<SignupQuestionResponse[]>([]);
+  const [signupResponsesLoading, setSignupResponsesLoading] = useState(true);
+
   useEffect(() => {
     setProfileLoading(true);
     setProfileError(null);
@@ -177,6 +184,14 @@ export function AffiliateProfileView({ affiliate: initialAffiliate, onBack }: Af
   useEffect(() => {
     publishersApi.getManagers().then(setManagers).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    setSignupResponsesLoading(true);
+    getPublisherSignupResponses(initialAffiliate.publisherId)
+      .then(setSignupResponses)
+      .catch(() => {})
+      .finally(() => setSignupResponsesLoading(false));
+  }, [initialAffiliate.publisherId]);
 
   const set = (field: keyof ProfileForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -493,6 +508,28 @@ export function AffiliateProfileView({ affiliate: initialAffiliate, onBack }: Af
                 className={inputCls}
               />
             </div>
+          </div>
+
+          {/* Signup Question Responses */}
+          <div className="rounded-3xl border theme-border bg-white p-6 space-y-4">
+            <h3 className="text-sm font-bold uppercase tracking-[0.24em] theme-text-muted">Signup Answers</h3>
+            {signupResponsesLoading ? (
+              <div className="flex items-center gap-2 text-sm theme-text-muted">
+                <Loader2 className="w-4 h-4 animate-spin text-cyan-600" />
+                Loading…
+              </div>
+            ) : signupResponses.length === 0 ? (
+              <p className="text-sm theme-text-muted italic">No signup answers recorded.</p>
+            ) : (
+              <dl className="space-y-4">
+                {signupResponses.map((r) => (
+                  <div key={r.question_id}>
+                    <dt className={labelCls}>{r.question_text}</dt>
+                    <dd className="text-sm theme-text-main mt-1 whitespace-pre-wrap break-words">{r.answer || <span className="italic theme-text-muted">—</span>}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
           </div>
 
           {/* Save Button */}
