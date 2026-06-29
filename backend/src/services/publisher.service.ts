@@ -366,7 +366,7 @@ export async function updatePublisherProfile(publisherId: string, input: AdminUp
     login_name: input.login_name,
     company_name: input.company_name,
     country_code: input.country_code,
-    account_status: input.account_status,
+    account_status: input.account_status?.toUpperCase(),
     password_hash,
     profile_metadata_patch: Object.keys(profilePatch).length > 0 ? profilePatch : undefined,
   });
