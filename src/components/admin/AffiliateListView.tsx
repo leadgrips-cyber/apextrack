@@ -151,7 +151,7 @@ export function AffiliateListView({
       affiliates.filter((a) => {
         const text = `${a.fullName} ${a.email} ${a.id}`.toLowerCase();
         const matchSearch = normalizedSearch ? text.includes(normalizedSearch) : true;
-        const matchStatus = statusFilter ? a.status === statusFilter : true;
+        const matchStatus = statusFilter ? a.status === statusFilter : a.status !== "Disabled";
         const matchCountry = countryFilter ? a.country === countryFilter : true;
         const matchManager = managerFilter ? a.manager === managerFilter : true;
         return matchSearch && matchStatus && matchCountry && matchManager;
