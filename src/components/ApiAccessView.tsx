@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Key, Copy, Check, RefreshCw, Terminal, ShieldAlert, AlertCircle, Loader2 } from "lucide-react";
+import { Key, Copy, Check, RefreshCw, Terminal, ShieldAlert, AlertCircle, Loader2, BookOpen, ExternalLink } from "lucide-react";
 import { useBranding } from "../contexts/BrandingContext";
 
 interface ApiToken {
@@ -81,6 +81,16 @@ export function ApiAccessView() {
             Manage your publisher API key for secure backend integration.
           </p>
         </div>
+        <a
+          href="/api-docs"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0 inline-flex items-center gap-1.5 border theme-border hover:bg-slate-100 dark:hover:bg-slate-800 theme-text-main px-3 py-1.5 rounded-lg text-xs font-mono uppercase font-bold transition cursor-pointer"
+        >
+          <BookOpen className="w-3.5 h-3.5" />
+          API Documentation
+          <ExternalLink className="w-3 h-3 opacity-60" />
+        </a>
       </div>
 
       {loading ? (

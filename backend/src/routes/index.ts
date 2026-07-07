@@ -30,6 +30,7 @@ import publisherSelfRouter from "./publisher_self.route.js";
 import signupQuestionsRouter from "./signup-questions.route.js";
 import mailerRouter from "./mailer.route.js";
 import verificationRouter from "./verification.route.js";
+import publisherApiV1Router from "./publisher-api.route.js";
 
 const router = Router();
 
@@ -64,5 +65,6 @@ router.use('/publisher/me', publisherSelfRouter);
 router.use('/signup-questions', signupQuestionsRouter);
 router.use('/mailer', mailerRouter);
 router.use('/verify-email', verificationRouter);
+router.use('/v1', publisherApiV1Router);
 
 export default router;

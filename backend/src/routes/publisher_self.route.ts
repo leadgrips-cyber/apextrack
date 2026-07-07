@@ -119,7 +119,7 @@ router.post('/api-token/regenerate', async (req: AuthRequest, res: Response, nex
     const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
     const insertResult = await query(
       `INSERT INTO api_tokens (publisher_id, token_hash, description, scopes, is_active)
-       VALUES ($1, $2, 'Publisher API Token', ARRAY['read'], true)
+       VALUES ($1, $2, 'Publisher API Token', ARRAY['read','write'], true)
        RETURNING id, description, scopes, created_at`,
       [req.user.sub, tokenHash]
     );

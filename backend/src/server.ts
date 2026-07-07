@@ -21,6 +21,7 @@ app.use(requestSizeLimitMiddleware);
 app.use(rateLimitingStatusMiddleware);
 
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+app.use('/api-docs', express.static(path.join(process.cwd(), 'public/api-docs')));
 app.use('/api', router);
 
 app.use((req: Request, res: Response) => {
